@@ -4,62 +4,71 @@ from config import cfg
 import json
 import os
 import numpy as np
+from os.path import join
 
-dmatrix_dir = cfg['dmatrix_dir'] + '/' + cfg['submit_version']
-out_dir = cfg["out_dir"] + '/' + cfg['submit_version']
+dmatrix_dir = join(cfg['dmatrix_dir'], cfg['submit_version'])
+out_dir_base = join(cfg["out_dir"], cfg['submit_version'])
 
-with open(out_dir + '/num_ele.json', 'r') as f:
+with open(join(out_dir_base, 'num_ele.json'), 'r') as f:
     num_ele = json.load(f)
 
-for name in cfg["trainings"]:
+for idname in cfg["trainings"]:
 
-    if not os.path.exists(out_dir + "/" + name):
-        os.makedirs(out_dir + "/" + name)
+    for training_bin in cfg["trainings"][idname]:
 
-    dtrain = xgb.DMatrix(dmatrix_dir + "/" + name + "_train.DMatrix")
-    deval  = xgb.DMatrix(dmatrix_dir + "/" + name + "_eval.DMatrix")
+        out_dir = join(out_dir_base, idname, training_bin)
 
-    params = cfg["trainings"][name]["params"]
-    variables = cfg["trainings"][name]["variables"]
+        dtrain = xgb.DMatrix(join(dmatrix_dir, idname + "_" + training_bin + "_train.DMatrix"))
+        deval  = xgb.DMatrix(join(dmatrix_dir, idname + "_" + training_bin + "_train.DMatrix"))
 
-    if 'balance_sample' in params:
-        if params['balance_sample']:
-            params['scale_pos_weight'] = 1. * num_ele[name]["bkg"] / num_ele[name]["sig"]
+        params = cfg["trainings"][idname][training_bin]["params"]
+        variables = cfg["trainings"][idname][training_bin]["variables"]
 
-    params['silent'] = 0
-    params['objective'] = 'binary:logistic'
-    params['nthread'] = 8
-    params['eval_metric'] = 'auc'
+        if 'balance_sample' in params:
+            if params['balance_sample']:
+                params['scale_pos_weight'] = 1. * num_ele[idname][training_bin]["bkg"] / num_ele[idname][training_bin]["sig"]
 
-    evallist = [(deval, 'eval'), (dtrain, 'train')]
+        params['silent'] = 0
+        # params['objective'] = 'binary:logistic'
+        params['objective'] = 'binary:logitraw'
+        params['nthread'] = 8
+        params['eval_metric'] = 'auc'
 
-    num_round = 1000
-    eval_dict = {}
+        evallist = [(deval, 'eval'), (dtrain, 'train')]
 
-    bst = xgb.train(params, dtrain, num_round, evallist, early_stopping_rounds=10, evals_result=eval_dict)
+        num_round = 1000
+        eval_dict = {}
 
-    # print("Saving xgboost model...")
-    # bst.save_model(out_dir + "/" + name + "/xgb.model")
+        bst = xgb.train(params, dtrain, num_round, evallist, early_stopping_rounds=10, evals_result=eval_dict)
 
-    print("Saving TMVA model...")
-    model = bst.get_dump()
-    variables_with_type = list(zip(variables, len(variables)*['F']))
-    tmvafile = out_dir + "/" + name + "/weights.xml"
-    convert_model(model,input_variables=variables_with_type,output_xml=tmvafile)
-    os.system("xmllint --format {0} > {0}.tmp".format(tmvafile))
-    os.system("mv {0}.tmp {0}".format(tmvafile))
-    os.system("cd "+ out_dir + "/" + name + " && gzip weights.xml")
+        # print("Saving xgboost model...")
+        # bst.save_model(out_dir + "/xgb.model")
 
-    # Save the auc during all the rounds
-    eval_arr = np.array([eval_dict[u'train'][u'auc'], eval_dict[u'eval'][u'auc']]).T
-    np.savetxt(out_dir + "/" + name + "/rounds.txt", eval_arr, fmt='%f %f',
-            header='train_auc eval_auc')
+        print("Saving TMVA model for {0} {1}...".format(idname, training_bin))
+        model = bst.get_dump()
+        variables_with_type = list(zip(variables, len(variables)*['F']))
+        tmvafile = join(out_dir, "weights.xml")
+        convert_model(model,input_variables=variables_with_type,output_xml=tmvafile)
+        os.system("xmllint --format {0} > {0}.tmp".format(tmvafile))
+        os.system("mv {0}.tmp {0}".format(tmvafile))
+        os.system("cd "+ out_dir + " && gzip -f weights.xml")
 
-    # Saving predictions
-    label_eval = deval.get_label()
-    label_train = dtrain.get_label()
-    y_pred_eval = bst.predict(deval, ntree_limit=bst.best_ntree_limit)
-    y_pred_train = bst.predict(dtrain, ntree_limit=bst.best_ntree_limit)
+        # Save the auc during all the rounds
+        eval_arr = np.array([eval_dict[u'train'][u'auc'], eval_dict[u'eval'][u'auc']]).T
+        np.savetxt(join(out_dir, "rounds.txt"), eval_arr, fmt='%f %f',
+                header='train_auc eval_auc')
 
-    np.save(out_dir + '/' + name + '/y_bdt_train.npy'.format(name), y_pred_train)
-    np.save(out_dir + '/' + name + '/y_bdt_eval.npy'.format(name), y_pred_eval)
+        # Saving predictions
+        label_eval = deval.get_label()
+        label_train = dtrain.get_label()
+        y_pred_raw_eval = bst.predict(deval, ntree_limit=bst.best_ntree_limit)
+        y_pred_raw_train = bst.predict(dtrain, ntree_limit=bst.best_ntree_limit)
+
+        y_pred_eval = 2.0/(1.0+np.exp(-2.0*y_pred_raw_eval))-1
+        y_pred_train = 2.0/(1.0+np.exp(-2.0*y_pred_raw_train))-1
+
+        np.save(join(out_dir, 'y_bdt_train.npy'), y_pred_train)
+        np.save(join(out_dir, 'y_bdt_eval.npy'), y_pred_eval)
+
+        np.save(join(out_dir, 'y_bdt_raw_train.npy'), y_pred_raw_train)
+        np.save(join(out_dir, 'y_bdt_raw_eval.npy'), y_pred_raw_eval)

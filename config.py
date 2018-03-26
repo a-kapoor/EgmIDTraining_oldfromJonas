@@ -5,7 +5,6 @@ if 'CMSSW_BASE' in os.environ:
 else:
     cmssw_base = ''
 
-
 cfg = {}
 
 cfg['ntuplizer_cfg'] = cmssw_base + '/src/RecoEgamma/ElectronIdentification/python/Training/ElectronMVATrainingNtuplizer_cfg.py'
@@ -35,7 +34,10 @@ cfg["selection_base"] = "genNpu > 1"
 cfg[ "selection_sig"]  = "matchedToGenEle == 1"
 cfg[ "selection_bkg"]  = "matchedToGenEle == 0 || matchedToGenEle == 3"
 
-# Define lists of variables used for training
+###########
+# Variables
+###########
+
 variables_base = [
              "ele_oldsigmaietaieta", "ele_oldsigmaiphiiphi",
              "ele_oldcircularity", "ele_oldr9", "ele_scletawidth",
@@ -55,7 +57,9 @@ variables_noiso_ee = variables_base + variables_ee_only
 variables_iso_eb = variables_noiso_eb + variables_iso_only
 variables_iso_eb = variables_noiso_ee + variables_iso_only
 
-# Define sets of hyperparameters to be used in the training
+#################
+# Hyperparameters
+#################
 
 params = {}
 params["EB1_5"] = {
@@ -84,6 +88,10 @@ params["EB1_10"] = {
 params["EB2_10"] = params["EB1_10"]
 params["EE_10"] = params["EB1_10"]
 
+###############################
+# Configuring the training bins
+###############################
+
 # Configure the different trainings.
 # For each bin, you have:
 #     - cut
@@ -91,77 +99,122 @@ params["EE_10"] = params["EB1_10"]
 #     - set of hyperparameters
 
 cfg["trainings"] = {}
+cfg["trainings"]["Fall17NoIsoV2"] = {}
+cfg["trainings"]["Fall17IsoV2"] = {}
 
 # NoIso ID
-cfg["trainings"]["NoIso_EB1_5"] = {
+cfg["trainings"]["Fall17NoIsoV2"]["EB1_5"] = {
         "cut": "ele_pt < 10. && abs(scl_eta) < 0.800",
         "variables": variables_noiso_eb,
         "params": params["EB1_5"],
         }
 
-cfg["trainings"]["NoIso_EB2_5"] = {
+cfg["trainings"]["Fall17NoIsoV2"]["EB2_5"] = {
         "cut": "ele_pt < 10. && abs(scl_eta) >= 0.800 && abs(scl_eta) < 1.479",
         "variables": variables_noiso_eb,
         "params": params["EB2_5"],
         }
 
-cfg["trainings"]["NoIso_EE_5"] = {
+cfg["trainings"]["Fall17NoIsoV2"]["EE_5"] = {
         "cut": "ele_pt < 10. && abs(scl_eta) >= 1.479",
         "variables": variables_noiso_ee,
         "params": params["EE_5"],
         }
 
-cfg["trainings"]["NoIso_EB1_10"] = {
+cfg["trainings"]["Fall17NoIsoV2"]["EB1_10"] = {
         "cut": "ele_pt >= 10. && abs(scl_eta) < 0.800",
         "variables": variables_noiso_eb,
         "params": params["EB1_10"],
         }
 
-cfg["trainings"]["NoIso_EB2_10"] = {
+cfg["trainings"]["Fall17NoIsoV2"]["EB2_10"] = {
         "cut": "ele_pt >= 10. && abs(scl_eta) >= 0.800 && abs(scl_eta) < 1.479",
         "variables": variables_noiso_eb,
         "params": params["EB2_10"],
         }
 
-cfg["trainings"]["NoIso_EE_10"] = {
+cfg["trainings"]["Fall17NoIsoV2"]["EE_10"] = {
         "cut": "ele_pt >= 10. && abs(scl_eta) >= 1.479",
         "variables": variables_noiso_ee,
         "params": params["EE_10"],
         }
 
 # Iso ID
-cfg["trainings"]["Iso_EB1_5"] = {
+cfg["trainings"]["Fall17IsoV2"]["EB1_5"] = {
         "cut": "ele_pt < 10. && abs(scl_eta) < 0.800",
         "variables": variables_noiso_eb,
         "params": params["EB1_5"],
         }
 
-cfg["trainings"]["Iso_EB2_5"] = {
+cfg["trainings"]["Fall17IsoV2"]["EB2_5"] = {
         "cut": "ele_pt < 10. && abs(scl_eta) >= 0.800 && abs(scl_eta) < 1.479",
         "variables": variables_noiso_eb,
         "params": params["EB2_5"],
         }
 
-cfg["trainings"]["Iso_EE_5"] = {
+cfg["trainings"]["Fall17IsoV2"]["EE_5"] = {
         "cut": "ele_pt < 10. && abs(scl_eta) >= 1.479",
         "variables": variables_noiso_ee,
         "params": params["EE_5"],
         }
 
-cfg["trainings"]["Iso_EB1_10"] = {
+cfg["trainings"]["Fall17IsoV2"]["EB1_10"] = {
         "cut": "ele_pt >= 10. && abs(scl_eta) < 0.800",
         "variables": variables_noiso_eb,
         "params": params["EB1_10"],
         }
 
-cfg["trainings"]["Iso_EB2_10"] = {
+cfg["trainings"]["Fall17IsoV2"]["EB2_10"] = {
         "cut": "ele_pt >= 10. && abs(scl_eta) >= 0.800 && abs(scl_eta) < 1.479",
         "variables": variables_noiso_eb,
         "params": params["EB2_10"],
         }
 
-cfg["trainings"]["Iso_EE_10"] = {
+cfg["trainings"]["Fall17IsoV2"]["EE_10"] = {
         "cut": "ele_pt >= 10. && abs(scl_eta) >= 1.479",
         "variables": variables_noiso_ee,
         "params": params["EE_10"],
+        }
+
+################################
+# Configuring the working points
+################################
+
+cfg["working_points"] = {}
+cfg["working_points"]["Fall17NoIsoV2"] = {}
+cfg["working_points"]["Fall17IsoV2"] = {}
+
+cfg["working_points"]["Fall17NoIsoV2"]["mvaEleID-Fall17-noIso-V2-wp90"] = {
+        "categories": ["NoIso_EB1_5", "NoIso_EB2_5", "NoIso_EE_5", "NoIso_EB1_10", "NoIso_EB2_10", "NoIso_EE_10"],
+        "type": "pt_scaling_cut_sig_eff_target"
+        }
+
+cfg["working_points"]["Fall17NoIsoV2"]["mvaEleID-Fall17-noIso-V2-wp80"] = {
+        "categories": ["NoIso_EB1_5", "NoIso_EB2_5", "NoIso_EE_5", "NoIso_EB1_10", "NoIso_EB2_10", "NoIso_EE_10"],
+        "type": "pt_scaling_cut_sig_eff_target"
+        }
+
+cfg["working_points"]["Fall17NoIsoV2"]["mvaEleID-Fall17-noIso-V2-wpLoose"] = {
+        "categories": ["NoIso_EB1_5", "NoIso_EB2_5", "NoIso_EE_5", "NoIso_EB1_10", "NoIso_EB2_10", "NoIso_EE_10"],
+        "type": "constant_cut_sig_eff_target"
+        }
+
+cfg["working_points"]["Fall17IsoV2"]["mvaEleID-Fall17-iso-V2-wp90"] = {
+        "categories": ["Iso_EB1_5", "Iso_EB2_5", "Iso_EE_5", "Iso_EB1_10", "Iso_EB2_10", "Iso_EE_10"],
+        "type": "pt_scaling_cut_sig_eff_target"
+        }
+
+cfg["working_points"]["Fall17IsoV2"]["mvaEleID-Fall17-iso-V2-wp80"] = {
+        "categories": ["Iso_EB1_5", "Iso_EB2_5", "Iso_EE_5", "Iso_EB1_10", "Iso_EB2_10", "Iso_EE_10"],
+        "type": "pt_scaling_cut_sig_eff_target"
+        }
+
+cfg["working_points"]["Fall17IsoV2"]["mvaEleID-Fall17-iso-V2-wpLoose"] = {
+        "categories": ["Iso_EB1_5", "Iso_EB2_5", "Iso_EE_5", "Iso_EB1_10", "Iso_EB2_10", "Iso_EE_10"],
+        "type": "constant_cut_sig_eff_target"
+        }
+
+cfg["working_points"]["Fall17IsoV2"]["mvaEleID-Fall17-iso-V2-wpHZZ"] = {
+        "categories": ["Iso_EB1_5", "Iso_EB2_5", "Nso_EE_5", "Iso_EB1_10", "Iso_EB2_10", "Iso_EE_10"],
+        "type": "constant_cut_sig_eff_target"
         }

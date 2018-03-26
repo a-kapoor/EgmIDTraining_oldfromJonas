@@ -5,17 +5,18 @@ from root_numpy import tree2array
 import numpy as np
 import xgboost as xgb
 import json
+from os.path import join
 
-ntuple_dir = cfg['ntuple_dir'] + '/' + cfg['submit_version']
-ntuple_file = ntuple_dir + '/train_eval.root'
+ntuple_dir = join(cfg['ntuple_dir'], cfg['submit_version'])
+ntuple_file = join(ntuple_dir, 'train_eval.root')
 
 input_file = TFile.Open(ntuple_file, "read")
 input_dir = input_file.Get("ntuplizer")
 tree_name = "tree"
 tree = input_dir.Get(tree_name)
 
-dmatrix_dir = cfg['dmatrix_dir'] + '/' + cfg['submit_version']
-out_dir = cfg["out_dir"] + '/' + cfg['submit_version']
+dmatrix_dir = join(cfg['dmatrix_dir'], cfg['submit_version'])
+out_dir = join(cfg["out_dir"], cfg['submit_version'])
 
 num_ele = {}
 
@@ -25,60 +26,63 @@ if not os.path.exists(dmatrix_dir):
 if not os.path.exists(out_dir):
     os.makedirs(out_dir)
 
-if not os.path.exists(out_dir + "/true"):
-    os.makedirs(out_dir + "/true")
+for idname in cfg["trainings"]:
 
-for name in cfg["trainings"]:
+    num_ele[idname] = {}
 
-    if not os.path.exists(out_dir + "/" + name):
-        os.makedirs(out_dir + "/" + name)
+    for training_bin in cfg["trainings"][idname]:
 
-    print("Processing data for training bin {}...".format(name))
+        out_dir_full = join(out_dir, idname, training_bin)
 
-    num_ele[name] = {}
+        if not os.path.exists(out_dir_full):
+            os.makedirs(out_dir_full)
 
-    cut = cfg["trainings"][name]["cut"]
-    variables = cfg["trainings"][name]["variables"]
+        print("Processing data for {0} training bin {1}...".format(idname, training_bin))
 
-    sel = cut + " && " + cfg["selection_base"] + " && (" + cfg["selection_sig"] + " || " + cfg["selection_bkg"] + ")"
-    data = tree2array(tree, selection=sel, branches=set(variables + ["matchedToGenEle", "ele_pt", "scl_eta"]))
+        num_ele[idname][training_bin] = {}
 
-    n = len(data)
+        cut = cfg["trainings"][idname][training_bin]["cut"]
+        variables = cfg["trainings"][idname][training_bin]["variables"]
 
-    X = np.zeros([n, len(variables)], dtype=np.float)
-    for i, v in enumerate(variables):
-        X[:,i] = data[v]
+        sel = cut + " && " + cfg["selection_base"] + " && (" + cfg["selection_sig"] + " || " + cfg["selection_bkg"] + ")"
+        data = tree2array(tree, selection=sel, branches=set(variables + ["matchedToGenEle", "ele_pt", "scl_eta"]))
 
-    y = data["matchedToGenEle"] == 1
+        n = len(data)
 
-    pt = data["ele_pt"]
-    eta = data["scl_eta"]
+        X = np.zeros([n, len(variables)], dtype=np.float)
+        for i, v in enumerate(variables):
+            X[:,i] = data[v]
 
-    n_sig = np.sum(y)
-    n_bkg = len(y) - n_sig
+        y = data["matchedToGenEle"] == 1
 
-    print("True electrons : {}".format(n_sig))
-    print("Fakes          : {}".format(n_bkg))
+        pt = data["ele_pt"]
+        eta = data["scl_eta"]
 
-    num_ele[name]["sig"] = n_sig
-    num_ele[name]["bkg"] = n_bkg
+        n_sig = np.sum(y)
+        n_bkg = len(y) - n_sig
 
-    # index where to split between training and eval
-    s = int(n * cfg["train_size"])
+        print("True electrons : {}".format(n_sig))
+        print("Fakes          : {}".format(n_bkg))
 
-    np.save(out_dir + '/' + name + '/y_train.npy'.format(name), y[:s])
-    np.save(out_dir + '/' + name + '/y_eval.npy'.format(name), y[s:])
+        num_ele[idname][training_bin]["sig"] = n_sig
+        num_ele[idname][training_bin]["bkg"] = n_bkg
 
-    np.save(out_dir + '/' + name + '/eta_train.npy'.format(name), eta[:s])
-    np.save(out_dir + '/' + name + '/eta_eval.npy'.format(name), eta[s:])
-    np.save(out_dir + '/' + name + '/pt_train.npy'.format(name), pt[:s])
-    np.save(out_dir + '/' + name + '/pt_eval.npy'.format(name), pt[s:])
+        # index where to split between training and eval
+        s = int(n * cfg["train_size"])
 
-    dtrain = xgb.DMatrix(X[:s], label=y[:s])
-    deval  = xgb.DMatrix(X[s:], label=y[s:])
+        np.save(join(out_dir_full, 'y_train.npy'), y[:s])
+        np.save(join(out_dir_full, 'y_eval.npy'), y[s:])
 
-    dtrain.save_binary(dmatrix_dir + "/" + name + "_train.DMatrix")
-    deval.save_binary(dmatrix_dir + "/" + name + "_eval.DMatrix")
+        np.save(join(out_dir_full, 'eta_train.npy'), eta[:s])
+        np.save(join(out_dir_full, 'ta_eval.npy'), eta[s:])
+        np.save(join(out_dir_full, 'pt_train.npy'), pt[:s])
+        np.save(join(out_dir_full, 'pt_eval.npy'), pt[s:])
 
-with open(out_dir + '/num_ele.json', 'w') as fp:
-    json.dump(num_ele, fp, indent=4)
+        dtrain = xgb.DMatrix(X[:s], label=y[:s])
+        deval  = xgb.DMatrix(X[s:], label=y[s:])
+
+        dtrain.save_binary(join(dmatrix_dir, idname + "_" + training_bin + "_train.DMatrix"))
+        deval.save_binary(join(dmatrix_dir, idname + "_" + training_bin + "_eval.DMatrix"))
+
+    with open(out_dir + '/num_ele.json', 'w') as fp:
+        json.dump(num_ele, fp, indent=4)
