@@ -29,7 +29,7 @@ dirnames = sys.argv[1:]
 
 ax1, ax2, axarr = create_axes(yunits=3)
 
-xmin = 0.7
+xmin = 0.6
 
 # Get the reference (first file)
 y_eval = np.load(dirnames[0] + "/y_eval.npy")

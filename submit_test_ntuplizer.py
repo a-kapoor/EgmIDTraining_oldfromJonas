@@ -36,10 +36,10 @@ if __name__ == '__main__':
             print "Failed submitting task: %s" % (cle)
 
     ##### submit MC
-    config.Data.outLFNDirBase = '%s/%s/' % (mainOutputDir,'train_eval')
+    config.Data.outLFNDirBase = '%s/%s/' % (mainOutputDir,'test')
     config.Data.splitting     = 'FileBased'
     config.Data.unitsPerJob   = 8
 
-    config.Data.inputDataset    = cfg["train_eval_sample"]
-    config.General.requestName  = cfg["train_eval_sample_request_name"]
+    config.Data.inputDataset    = cfg["test_sample"]
+    config.General.requestName  = cfg["test_sample_request_name"]
     submit(config)

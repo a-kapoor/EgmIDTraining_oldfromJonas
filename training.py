@@ -19,7 +19,7 @@ for idname in cfg["trainings"]:
         out_dir = join(out_dir_base, idname, training_bin)
 
         dtrain = xgb.DMatrix(join(dmatrix_dir, idname + "_" + training_bin + "_train.DMatrix"))
-        deval  = xgb.DMatrix(join(dmatrix_dir, idname + "_" + training_bin + "_train.DMatrix"))
+        deval  = xgb.DMatrix(join(dmatrix_dir, idname + "_" + training_bin + "_eval.DMatrix"))
 
         params = cfg["trainings"][idname][training_bin]["params"]
         variables = cfg["trainings"][idname][training_bin]["variables"]
@@ -31,10 +31,10 @@ for idname in cfg["trainings"]:
         params['silent'] = 0
         # params['objective'] = 'binary:logistic'
         params['objective'] = 'binary:logitraw'
-        params['nthread'] = 8
+        params['nthread'] = 16
         params['eval_metric'] = 'auc'
 
-        evallist = [(deval, 'eval'), (dtrain, 'train')]
+        evallist = [(dtrain, 'train'), (deval, 'eval')]
 
         num_round = 1000
         eval_dict = {}
