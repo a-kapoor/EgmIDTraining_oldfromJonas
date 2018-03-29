@@ -24,13 +24,12 @@ def get_category(location, ptrange):
     return training_bin
 
 # Inspired by https://root.cern.ch/doc/master/TGraphAsymmErrors_8cxx_source.html#l00573
-def eff_with_err(p, t, cl=0.638, percent=False):
+def eff_with_err(p, t, cl=0.638, percent=False, alpha=1, beta=1):
     if not hasattr(p, "__len__"):
         p = [p]
     if not hasattr(t, "__len__"):
         t = [t]
 
-    alpha, beta = 1, 1
     n = len(p)
 
     eff = np.zeros(n)
@@ -49,15 +48,7 @@ def eff_with_err(p, t, cl=0.638, percent=False):
     else:
         return eff, lower, upper
 
-location_expl = {
-        "EB0" : r' ($\eta < 0.4$)',
-        "EB"  : r'',
-        "EB1" : r' ($\eta < 0.8$)',
-        "EB2" : r' ($\eta >= 0.8$)',
-        "EE"  : r'',
-        }
-
-plotdir = join("plots", cfg['submit_version'])
+plot_dir = join("plots", cfg['submit_version'])
 
 def read_val_ntuple(rootfile, location=None, ptrange=None, branches=None, selection=None, stop=None, treename="tree"):
 
@@ -98,14 +89,14 @@ def read_val_ntuple(rootfile, location=None, ptrange=None, branches=None, select
 ntuple_dir = cfg['ntuple_dir'] + '/' + cfg['submit_version']
 rootfile = ntuple_dir + '/test.root'
 
-if not os.path.exists(join(plotdir, "roc")):
-    os.makedirs(join(plotdir, "roc"))
-if not os.path.exists(join(plotdir, "turnon")):
-    os.makedirs(join(plotdir, "turnon"))
-if not os.path.exists(join(plotdir, "etaeff")):
-    os.makedirs(join(plotdir, "etaeff"))
-if not os.path.exists(join(plotdir, "nvtx")):
-    os.makedirs(join(plotdir, "nvtx"))
+if not os.path.exists(join(plot_dir, "roc")):
+    os.makedirs(join(plot_dir, "roc"))
+if not os.path.exists(join(plot_dir, "turnon")):
+    os.makedirs(join(plot_dir, "turnon"))
+if not os.path.exists(join(plot_dir, "etaeff")):
+    os.makedirs(join(plot_dir, "etaeff"))
+if not os.path.exists(join(plot_dir, "nvtx")):
+    os.makedirs(join(plot_dir, "nvtx"))
 
 # Enable or disable performance plots
 
@@ -184,22 +175,9 @@ roc_curves = [
               ("2017", "Fall17IsoV2RawVals", "iso V2 "),
              ]
 
-roc_training_filenames = [
-        "../../ntuples/TMVA/2017_V2_puinfo/TMVA_{0}_{1}_2017_V2_puinfo.root",
-        "../../ntuples/TMVA/2017_V2_puinfo_iso/TMVA_{0}_{1}_2017_V2_puinfo_iso.root",
-        "../../ntuples/xgboost_out/electronID_mva_Fall17_noIso_V2_{0}_{1}.roc.txt",
-        "../../ntuples/xgboost_out/electronID_mva_Fall17_iso_V2_{0}_{1}.roc.txt",
-        ]
-
-sig, bkg = {}, {}
-
 roc_plot_args = {
-             #'marker': 'o',
              'markeredgewidth': 0,
-             #'markersize': 1.3,
-             #'linewidth': 0,
              'linewidth': 2,
-             #'linewidth': 1,
             }
 
 ##################
@@ -207,8 +185,7 @@ roc_plot_args = {
 ##################
 
 def create_axes(yunits=4):
-    #fig = plt.figure(figsize=(6.4, 4.6)) # the default figsize
-    fig = plt.figure(figsize=(6.4, 4.8)) # the default figsize
+    fig = plt.figure(figsize=(6.4, 4.8))
     gs = gridspec.GridSpec(yunits, 1)
     ax1 = plt.subplot(gs[:2, :])
     ax2 = plt.subplot(gs[2:, :])
@@ -260,46 +237,23 @@ if ROC:
                 ax1.semilogy(x[sel], y[sel], color=roccolors[k], label=lbl, **roc_plot_args)
                 ax2.plot(x[sel], y[sel] / np.interp(x[sel], xref, yref), color=roccolors[k], **roc_plot_args)
 
-                # # Draw the training curves
-                # fn = roc_training_filenames[k].format(location, ptrange)
-                # if 'root' in fn:
-                    # xtrain, ytrain = get_roc_from_tmva_outfile(fn, "TrainTree")
-                # else:
-                    # roc = np.loadtxt(fn).T
-                    # xtrain, ytrain = roc[0], roc[1]
-                # sel = xtrain > xmin
-                # ax1.semilogy(xtrain[sel], ytrain[sel], linestyle='--', color=roccolors[k], linewidth=1)
-                # ax2.plot(xtrain[sel], ytrain[sel] / np.interp(xtrain[sel], xref, yref), linestyle='--', color=roccolors[k], linewidth=1)
-
                 k = k + 1
 
             # Styling the plot
-
-            # if ptrange == '5':
-                # ax1.set_title(r'ROC curves for Fall17 V2 - 5 < $p_T$ < 10 GeV - {0}{1}'.format(location, location_expl[location]) )
-            # else:
-                # ax1.set_title(r'ROC curves for Fall17 V2 - $p_T$ > 10 GeV - {0}{1}'.format(location, location_expl[location]) )
-
-            # ax1.text(80, 0.2, 'Thin dashed line: training ROC')
-            # ax2.text(85, 0.45, 'Relative to Fall17 V1')
-
             ax1.set_ylabel(r'Background efficiency [%]')
 
             ax2.set_xlabel(r'Signal efficiency [%]')
-            #ax2.set_ylabel(r'Ratio (to Fall17 V1)')
             ax2.set_ylabel(r'Ratio')
 
             ax1.set_ylim(0.101, 100)
             ax2.set_ylim(0.301, 1.09)
 
-            #ax1.legend(loc="upper left", ncol=1)
             ax1.legend(loc="upper left", ncol=2)
-            #ax1.legend(ncol=2)
 
             ax1.yaxis.set_major_formatter(FormatStrFormatter("%.0f"))
 
-            plt.savefig(join(plotdir, "roc/2017_{0}_{1}.pdf".format(location, ptrange)), bbox_inches='tight')
-            plt.savefig(join(plotdir, "roc/2017_{0}_{1}.png".format(location, ptrange)), bbox_inches='tight')
+            plt.savefig(join(plot_dir, "roc/2017_{0}_{1}.pdf".format(location, ptrange)), bbox_inches='tight')
+            plt.savefig(join(plot_dir, "roc/2017_{0}_{1}.png".format(location, ptrange)), bbox_inches='tight')
 
             plt.close()
 
@@ -380,10 +334,8 @@ if turnon:
             ax1.plot([10, 10], ax1.get_ylim(), 'k--')
             ax2.plot([10, 10], ax2.get_ylim(), 'k--')
 
-            # ax1.set_title(r'Turnon curves for Fall17 V2 - {0}{1}'.format(location, location_expl[location]))
-
-            plt.savefig(join(plotdir, "turnon/2017_{0}_{1}.pdf".format(location, wplabel)), bbox_inches='tight')
-            plt.savefig(join(plotdir, "turnon/2017_{0}_{1}.png".format(location, wplabel)), bbox_inches='tight')
+            plt.savefig(join(plot_dir, "turnon/2017_{0}_{1}.pdf".format(location, wplabel)), bbox_inches='tight')
+            plt.savefig(join(plot_dir, "turnon/2017_{0}_{1}.png".format(location, wplabel)), bbox_inches='tight')
 
             plt.close()
 #####
@@ -462,8 +414,8 @@ if etaeff:
             # else:
                 # ax1.set_title(r'Efficiencies vs $\eta$ for Fall17 V2 - $p_T$ > 10 GeV ')
 
-            plt.savefig(join(plotdir, "etaeff/{0}_{1}.pdf".format(ptrange, wplabel)), bbox_inches='tight')
-            plt.savefig(join(plotdir, "etaeff/{0}_{1}.png".format(ptrange, wplabel)), bbox_inches='tight')
+            plt.savefig(join(plot_dir, "etaeff/{0}_{1}.pdf".format(ptrange, wplabel)), bbox_inches='tight')
+            plt.savefig(join(plot_dir, "etaeff/{0}_{1}.png".format(ptrange, wplabel)), bbox_inches='tight')
 
             plt.close()
 
@@ -526,12 +478,7 @@ if nvtx:
 
                 ax2.yaxis.set_major_formatter(FormatStrFormatter("%.0f"))
 
-                # if ptrange == '5':
-                    # ax1.set_title(r'Pileup curves for Fall17 V2 - 5 < $p_T$ < 10 GeV - {0}{1}'.format(location, location_expl[location]) )
-                # else:
-                    # ax1.set_title(r'Pileup curves for Fall17 V2 - $p_T$ > 10 GeV - {0}{1}'.format(location, location_expl[location]) )
-
-                plt.savefig(join(plotdir, "nvtx/2017_{0}_{1}_{2}.pdf".format(location, ptrange, wplabel)), bbox_inches='tight')
-                plt.savefig(join(plotdir, "nvtx/2017_{0}_{1}_{2}.png".format(location, ptrange, wplabel)), bbox_inches='tight')
+                plt.savefig(join(plot_dir, "nvtx/2017_{0}_{1}_{2}.pdf".format(location, ptrange, wplabel)), bbox_inches='tight')
+                plt.savefig(join(plot_dir, "nvtx/2017_{0}_{1}_{2}.png".format(location, ptrange, wplabel)), bbox_inches='tight')
 
                 plt.close()

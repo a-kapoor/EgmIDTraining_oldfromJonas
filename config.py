@@ -32,7 +32,7 @@ cfg["train_size"] = 0.5
 cfg["test_sample"] = '/DYJetsToLL_M-50_TuneCP5_13TeV-madgraphMLM-pythia8/RunIIFall17MiniAOD-RECOSIMstep_94X_mc2017_realistic_v10_ext1-v1/MINIAODSIM'
 cfg["test_sample_request_name"] = 'DYJetsToLL_M-50_TuneCP5_13TeV-madgraphMLM-pythia8-ext1'
 
-cfg["selection_base"] = "genNpu > 1"
+cfg["selection_base"] = "genNpu > 1 && (matchedToGenEle == 1 || matchedToGenEle == 0 || matchedToGenEle == 3)"
 cfg[ "selection_sig"]  = "matchedToGenEle == 1"
 cfg[ "selection_bkg"]  = "matchedToGenEle == 0 || matchedToGenEle == 3"
 
@@ -109,36 +109,42 @@ cfg["trainings"]["Fall17NoIsoV2"]["EB1_5"] = {
         "cut": "ele_pt < 10. && abs(scl_eta) < 0.800",
         "variables": variables_noiso_eb,
         "params": params["EB1_5"],
+        "label": r'EB1 5 - 5 < $p_T$ < 10 GeV, ($|\eta| < 0.8$)',
         }
 
 cfg["trainings"]["Fall17NoIsoV2"]["EB2_5"] = {
         "cut": "ele_pt < 10. && abs(scl_eta) >= 0.800 && abs(scl_eta) < 1.479",
         "variables": variables_noiso_eb,
         "params": params["EB2_5"],
+        "label": r'EB2 5 - 5 < $p_T$ < 10 GeV, ($|\eta| > 0.8$)',
         }
 
 cfg["trainings"]["Fall17NoIsoV2"]["EE_5"] = {
         "cut": "ele_pt < 10. && abs(scl_eta) >= 1.479",
         "variables": variables_noiso_ee,
         "params": params["EE_5"],
+        "label": r'EE 5 - 5 < $p_T$ < 10 GeV',
         }
 
 cfg["trainings"]["Fall17NoIsoV2"]["EB1_10"] = {
         "cut": "ele_pt >= 10. && abs(scl_eta) < 0.800",
         "variables": variables_noiso_eb,
         "params": params["EB1_10"],
+        "label": r'EB1 10 - $p_T$ > 10 GeV, ($|\eta| < 0.8$)',
         }
 
 cfg["trainings"]["Fall17NoIsoV2"]["EB2_10"] = {
         "cut": "ele_pt >= 10. && abs(scl_eta) >= 0.800 && abs(scl_eta) < 1.479",
         "variables": variables_noiso_eb,
         "params": params["EB2_10"],
+        "label": r'EB2 10 - $p_T$ > 10 GeV, ($|\eta| > 0.8$)',
         }
 
 cfg["trainings"]["Fall17NoIsoV2"]["EE_10"] = {
         "cut": "ele_pt >= 10. && abs(scl_eta) >= 1.479",
         "variables": variables_noiso_ee,
         "params": params["EE_10"],
+        "label": r'EE 10 - $p_T$ > 10 GeV',
         }
 
 # Iso ID
@@ -146,36 +152,42 @@ cfg["trainings"]["Fall17IsoV2"]["EB1_5"] = {
         "cut": "ele_pt < 10. && abs(scl_eta) < 0.800",
         "variables": variables_iso_eb,
         "params": params["EB1_5"],
+        "label": r'EB1 5 - 5 < $p_T$ < 10 GeV, ($|\eta| < 0.8$)',
         }
 
 cfg["trainings"]["Fall17IsoV2"]["EB2_5"] = {
         "cut": "ele_pt < 10. && abs(scl_eta) >= 0.800 && abs(scl_eta) < 1.479",
         "variables": variables_iso_eb,
         "params": params["EB2_5"],
+        "label": r'EB2 5 - 5 < $p_T$ < 10 GeV, ($|\eta| > 0.8$)',
         }
 
 cfg["trainings"]["Fall17IsoV2"]["EE_5"] = {
         "cut": "ele_pt < 10. && abs(scl_eta) >= 1.479",
         "variables": variables_iso_ee,
         "params": params["EE_5"],
+        "label": r'EE 5 - 5 < $p_T$ < 10 GeV',
         }
 
 cfg["trainings"]["Fall17IsoV2"]["EB1_10"] = {
         "cut": "ele_pt >= 10. && abs(scl_eta) < 0.800",
         "variables": variables_iso_eb,
         "params": params["EB1_10"],
+        "label": r'EB1 10 - $p_T$ > 10 GeV, ($|\eta| < 0.8$)',
         }
 
 cfg["trainings"]["Fall17IsoV2"]["EB2_10"] = {
         "cut": "ele_pt >= 10. && abs(scl_eta) >= 0.800 && abs(scl_eta) < 1.479",
         "variables": variables_iso_eb,
         "params": params["EB2_10"],
+        "label": r'EB2 10 - $p_T$ > 10 GeV, ($|\eta| > 0.8$)',
         }
 
 cfg["trainings"]["Fall17IsoV2"]["EE_10"] = {
         "cut": "ele_pt >= 10. && abs(scl_eta) >= 1.479",
         "variables": variables_iso_ee,
         "params": params["EE_10"],
+        "label": r'EE 10 - 5 < $p_T$ < 10 GeV, ($|\eta| < 0.8$)',
         }
 
 ################################

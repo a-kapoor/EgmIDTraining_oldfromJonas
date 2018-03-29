@@ -1,0 +1,108 @@
+\documentclass[aspectratio=1610]{beamer}
+%
+% Choose how your presentation looks.
+%
+% For more themes, color themes and font themes, see:
+% http://deic.uab.es/~iblanes/beamer_gallery/index_by_theme.html
+%
+\mode<presentation>
+{
+  %\usetheme{default}      % or try Darmstadt, Madrid, Warsaw, ...
+  \usetheme{metropolis}      % or try Darmstadt, Madrid, Warsaw, ...
+  %\usecolortheme{default} % or try albatross, beaver, crane, ...
+  %\usefonttheme{default}  % or try serif, structurebold, ...
+  \setbeamertemplate{navigation symbols}{}
+  \setbeamertemplate{caption}[numbered]
+  \setbeamertemplate{footline}[frame number]
+  \setbeamertemplate{caption}{\raggedright\insertcaption\par}
+  \setbeamersize{text margin left=0.5cm,text margin right=0.5cm}
+  \setbeamercolor{background canvas}{bg=white} % The metropolis background is not white, but then the plots stick out in this bad way
+}
+
+\usepackage{color, colortbl}
+\usepackage[english]{babel}
+\usepackage[utf8x]{inputenc}
+\usepackage{tabu}
+\usepackage{multirow}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{hyperref}
+\usepackage{tikz}
+\usepackage{appendixnumberbeamer}
+\usepackage{textgreek}
+%\usepackage{color}
+\usepackage[export]{adjustbox}
+\usepackage{pbox}
+%\usepackage{booktabs}
+
+\usepackage{listings}
+
+\hypersetup{
+  colorlinks=true,
+  linkcolor=mDarkTeal!50!mDarkTeal,
+  urlcolor=blue!70!red,
+  %allbordercolors=black,
+  %pdfborder=1
+}
+ 
+\definecolor{codegreen}{rgb}{0,0.6,0}
+\definecolor{codegray}{rgb}{0.5,0.5,0.5}
+\definecolor{codepurple}{rgb}{0.58,0,0.82}
+\definecolor{backcolour}{rgb}{0.95,0.95,0.92}
+ 
+\lstdefinestyle{mystyle}{
+    backgroundcolor=\color{backcolour},   
+    commentstyle=\color{codegreen},
+    keywordstyle=\color{magenta},
+    numberstyle=\tiny\color{codegray},
+    stringstyle=\color{codepurple},
+    basicstyle=\footnotesize,
+    breakatwhitespace=false,         
+    breaklines=true,                 
+    captionpos=b,                    
+    keepspaces=true,                 
+    numbers=left,                    
+    numbersep=5pt,                  
+    showspaces=false,                
+    showstringspaces=false,
+    showtabs=false,                  
+    tabsize=2
+}
+ 
+\lstset{style=mystyle}
+ 
+
+\newcommand{\backupbegin}{
+   \newcounter{finalframe}
+   \setcounter{finalframe}{\value{framenumber}}
+}
+\newcommand{\backupend}{
+   \setcounter{framenumber}{\value{finalframe}}
+}
+
+\definecolor{mplBlue}{HTML}{1F77BF}
+\definecolor{mplOrange}{HTML}{ff7f0e}
+\definecolor{mplGreen}{HTML}{2ca02c}
+\definecolor{mplRed}{HTML}{d62728}
+\definecolor{mplPurple}{HTML}{9467bd}
+\definecolor{mplBrown}{HTML}{8c564b}
+\definecolor{mplPink}{HTML}{e377c2}
+\definecolor{mplGrey}{HTML}{7f7f7f}
+\definecolor{mplYellow}{HTML}{bcbd22}
+\definecolor{mplCyan}{HTML}{17becf}
+
+%\definecolor{UglyYellow}{rgb}{217,235,86}
+\definecolor{UglyYellow}{rgb}{0.85,0.92157,0.3373}
+
+\graphicspath{ {figs/} {/home/jonas/cernbox/www/slides/logos/}}
+
+\def\code#1{\texttt{#1}}
+
+% logo of my university
+\titlegraphic{
+%\hspace*{9cm}~%
+\hfill
+   \includegraphics[width=2.6cm,valign=t]{llr.png}\hspace*{0.5cm}~%
+   %\includegraphics[width=1.5cm,valign=t]{cnrs.png}\hspace*{0.5cm}~%
+   \includegraphics[width=1.74cm,valign=t]{x.png}
+}

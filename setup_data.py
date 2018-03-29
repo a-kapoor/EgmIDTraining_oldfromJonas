@@ -44,7 +44,7 @@ for idname in cfg["trainings"]:
         cut = cfg["trainings"][idname][training_bin]["cut"]
         variables = cfg["trainings"][idname][training_bin]["variables"]
 
-        sel = cut + " && " + cfg["selection_base"] + " && (" + cfg["selection_sig"] + " || " + cfg["selection_bkg"] + ")"
+        sel = cut + " && " + cfg["selection_base"]
         data = tree2array(tree, selection=sel, branches=set(variables + ["matchedToGenEle", "ele_pt", "scl_eta"]))
 
         n = len(data)

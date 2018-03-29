@@ -1,0 +1,84 @@
+\input{header}
+\usepackage{pdfpages}
+\usepackage{adjustbox}
+\usepackage{array}
+\usepackage{booktabs}
+\usepackage{multirow}
+
+\newcolumntype{R}[2]{%
+    >{\adjustbox{angle=#1,lap=\width-(#2)}\bgroup}%
+    l%
+    <{\egroup}%
+}
+
+\newcommand*\rot{\multicolumn{1}{R{45}{1em}}}% no optional argument here, please!
+
+\title[Your Short Title]{Update on Electon MVA ID\\e/gamma ID meeting}
+\author{
+    \underline{Mr. or Mrs. Electron ID}
+}
+\institute{LLR-École Polytechnique}
+\date{\today}
+
+\begin{document}
+
+\begin{frame}
+  \titlepage
+\end{frame}
+
+\section{Performance Electron MVA ID}
+
+\begin{frame}{ROC Curves}
+    \begin{table}[]
+\begin{tabular}{cccc}
+    {} & EB1 ($\eta < 0.8$) & EB2 ($\eta > 0.8$) & EE \\
+    \raisebox{0.7\totalheight}{\rotatebox[origin=c]{90}{$10~\mathrm{GeV}< p_{T}$}} &
+    \includegraphics[width=0.29\textwidth]{PLOT_ROC_EB1_10} &
+    \includegraphics[width=0.29\textwidth]{PLOT_ROC_EB2_10} &
+    \includegraphics[width=0.29\textwidth]{PLOT_ROC_EE_10} \\
+    \raisebox{0.55\totalheight}{\rotatebox[origin=c]{90}{$5 < p_{T} < 10~\mathrm{GeV}$}} &
+    \includegraphics[width=0.29\textwidth]{PLOT_ROC_EB1_5} &
+    \includegraphics[width=0.29\textwidth]{PLOT_ROC_EB2_5} &
+    \includegraphics[width=0.29\textwidth]{PLOT_ROC_EE_5} \\
+\end{tabular}
+    \end{table}
+\end{frame}
+
+\begin{frame}{Efficiencies vs. $p_T$ (aka. Turnon Curves)}
+    \begin{table}[]
+\begin{tabular}{ccc}
+    EB1 & EB2 & EE \\
+    \includegraphics[width=0.31\textwidth]{PLOT_TURNON_EB1} &
+    \includegraphics[width=0.31\textwidth]{PLOT_TURNON_EB2} &
+    \includegraphics[width=0.31\textwidth]{PLOT_TURNON_EE} \\
+\end{tabular}
+    \end{table}
+\end{frame}
+
+\begin{frame}{Efficiencies vs. $\eta$}
+    \begin{table}[]
+\begin{tabular}{cc}
+    $5 < p_{T} < 10~\mathrm{GeV}$ & $10~\mathrm{GeV}< p_{T}$ \\
+    \includegraphics[width=0.48\textwidth]{PLOT_ETAEFF_5} &
+    \includegraphics[width=0.48\textwidth]{PLOT_ETAEFF_10} \\
+\end{tabular}
+    \end{table}
+\end{frame}
+
+\begin{frame}{Efficiencies vs. Pileuep}
+    \begin{table}[]
+\begin{tabular}{cccc}
+    {} & EB1 ($\eta < 0.8$) & EB2 ($\eta > 0.8$) & EE \\
+    \raisebox{0.7\totalheight}{\rotatebox[origin=c]{90}{$10~\mathrm{GeV}< p_{T}$}} &
+    \includegraphics[width=0.29\textwidth]{PLOT_NVTX_EB1_10} &
+    \includegraphics[width=0.29\textwidth]{PLOT_NVTX_EB2_10} &
+    \includegraphics[width=0.29\textwidth]{PLOT_NVTX_EE_10} \\
+    \raisebox{0.55\totalheight}{\rotatebox[origin=c]{90}{$5 < p_{T} < 10~\mathrm{GeV}$}} &
+    \includegraphics[width=0.29\textwidth]{PLOT_NVTX_EB1_5} &
+    \includegraphics[width=0.29\textwidth]{PLOT_NVTX_EB2_5} &
+    \includegraphics[width=0.29\textwidth]{PLOT_NVTX_EE_5} \\
+\end{tabular}
+    \end{table}
+\end{frame}
+
+\end{document}

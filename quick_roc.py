@@ -9,8 +9,7 @@ prop_cycle = plt.rcParams['axes.prop_cycle']
 colors = prop_cycle.by_key()['color']
 
 def create_axes(yunits=4):
-    #fig = plt.figure(figsize=(6.4, 4.6)) # the default figsize
-    fig = plt.figure(figsize=(6.4, 4.8)) # the default figsize
+    fig = plt.figure(figsize=(6.4, 4.8))
     gs = gridspec.GridSpec(yunits, 1)
     ax1 = plt.subplot(gs[:2, :])
     ax2 = plt.subplot(gs[2:, :])
