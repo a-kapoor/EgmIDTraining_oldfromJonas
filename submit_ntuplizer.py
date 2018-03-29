@@ -1,6 +1,13 @@
 from CRABClient.UserUtilities import config, getUsernameFromSiteDB
 from config import cfg
 import sys
+import argparse
+
+parser = argparse.ArgumentParser(description='Submit crab jobs.')
+parser.add_argument('--train', action='store_true', default=False, help='make ntuplizer for training.')
+parser.add_argument('--test', action='store_true', default=False, help='make ntuplizer for testing.')
+
+args = parser.parse_args()
 
 config = config()
 
@@ -36,10 +43,17 @@ if __name__ == '__main__':
             print "Failed submitting task: %s" % (cle)
 
     ##### submit MC
-    config.Data.outLFNDirBase = '%s/%s/' % (mainOutputDir,'test')
     config.Data.splitting     = 'FileBased'
     config.Data.unitsPerJob   = 8
 
-    config.Data.inputDataset    = cfg["test_sample"]
-    config.General.requestName  = cfg["test_sample_request_name"]
-    submit(config)
+    if args.train:
+        config.Data.outLFNDirBase = '%s/%s/' % (mainOutputDir,'train_eval')
+        config.Data.inputDataset    = cfg["train_eval_sample"]
+        config.General.requestName  = cfg["train_eval_sample_request_name"]
+        submit(config)
+
+    if args.test:
+        config.Data.outLFNDirBase = '%s/%s/' % (mainOutputDir,'test_eval')
+        config.Data.inputDataset    = cfg["test_sample"]
+        config.General.requestName  = cfg["test_sample_request_name"]
+        submit(config)
