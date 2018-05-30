@@ -53,7 +53,7 @@ if __name__ == '__main__':
         submit(config)
 
     if args.test:
-        config.Data.outLFNDirBase = '%s/%s/' % (mainOutputDir,'test_eval')
+        config.Data.outLFNDirBase = '%s/%s/' % (mainOutputDir,'test')
         config.Data.inputDataset    = cfg["test_sample"]
         config.General.requestName  = cfg["test_sample_request_name"]
         submit(config)
