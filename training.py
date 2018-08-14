@@ -1,74 +1,53 @@
 import xgboost as xgb
-from xgboost2tmva import convert_model
 from config import cfg
-import json
 import os
 import numpy as np
 from os.path import join
+import uproot
 
-dmatrix_dir = join(cfg['dmatrix_dir'], cfg['submit_version'])
+from xgb_bo import XgbBoTrainer
+import xgboost2tmva
+
 out_dir_base = join(cfg["out_dir"], cfg['submit_version'])
-
-with open(join(out_dir_base, 'num_ele.json'), 'r') as f:
-    num_ele = json.load(f)
 
 for idname in cfg["trainings"]:
 
     for training_bin in cfg["trainings"][idname]:
 
+        print("Process training pipeline for {0} {1}".format(idname, training_bin))
+
         out_dir = join(out_dir_base, idname, training_bin)
 
-        dtrain = xgb.DMatrix(join(dmatrix_dir, idname + "_" + training_bin + "_train.DMatrix"))
-        deval  = xgb.DMatrix(join(dmatrix_dir, idname + "_" + training_bin + "_eval.DMatrix"))
+        if not os.path.exists(out_dir):
+            os.makedirs(out_dir)
 
-        params = cfg["trainings"][idname][training_bin]["params"]
-        variables = cfg["trainings"][idname][training_bin]["variables"]
+        feature_cols = cfg["trainings"][idname][training_bin]["variables"]
 
-        if 'balance_sample' in params:
-            if params['balance_sample']:
-                params['scale_pos_weight'] = 1. * num_ele[idname][training_bin]["bkg"] / num_ele[idname][training_bin]["sig"]
+        print("Reading data...")
+        ntuple_dir = join(cfg['ntuple_dir'], cfg['submit_version'])
+        ntuple_file = join(ntuple_dir, 'train_eval.root')
+        root_file = uproot.open(ntuple_file)
+        tree = root_file["ntuplizer/tree"]
 
-        params['silent'] = 0
-        # params['objective'] = 'binary:logistic'
-        params['objective'] = 'binary:logitraw'
-        params['nthread'] = 16
-        params['eval_metric'] = 'auc'
+        df = tree.pandas.df(feature_cols + ["ele_pt", "scl_eta", "matchedToGenEle", "Fall17NoIsoV2RawVals", "genNpu"], entrystop=None)
 
-        evallist = [(dtrain, 'train'), (deval, 'eval')]
+        df = df.query(cfg["selection_base"])
+        df = df.query(cfg["trainings"][idname][training_bin]["cut"])
+        df.eval('y = ({0}) + 2 * ({1}) - 1'.format(cfg["selection_bkg"], cfg["selection_sig"]))
 
-        num_round = 1000
-        eval_dict = {}
+        print("Running bayesian optimized training...")
+        xgb_bo_trainer = XgbBoTrainer(data=df, X_cols=feature_cols, y_col="y")
+        xgb_bo_trainer.run()
 
-        bst = xgb.train(params, dtrain, num_round, evallist, early_stopping_rounds=10, evals_result=eval_dict)
-
-        # print("Saving xgboost model...")
-        # bst.save_model(out_dir + "/xgb.model")
-
-        print("Saving TMVA model for {0} {1}...".format(idname, training_bin))
-        model = bst.get_dump()
-        variables_with_type = list(zip(variables, len(variables)*['F']))
+        print("Saving weight files...")
         tmvafile = join(out_dir, "weights.xml")
-        convert_model(model,input_variables=variables_with_type,output_xml=tmvafile)
-        os.system("xmllint --format {0} > {0}.tmp".format(tmvafile))
-        os.system("mv {0}.tmp {0}".format(tmvafile))
-        os.system("cd "+ out_dir + " && gzip -f weights.xml")
+        xgboost2tmva.convert_model(xgb_bo_trainer.models["bo"]._Booster.get_dump(),
+                                   input_variables = list(zip(feature_cols, len(feature_cols)*['F'])),
+                                   output_xml = tmvafile)
 
-        # Save the auc during all the rounds
-        eval_arr = np.array([eval_dict[u'train'][u'auc'], eval_dict[u'eval'][u'auc']]).T
-        np.savetxt(join(out_dir, "rounds.txt"), eval_arr, fmt='%f %f',
-                header='train_auc eval_auc')
-
-        # Saving predictions
-        label_eval = deval.get_label()
-        label_train = dtrain.get_label()
-        y_pred_raw_eval = bst.predict(deval, ntree_limit=bst.best_ntree_limit)
-        y_pred_raw_train = bst.predict(dtrain, ntree_limit=bst.best_ntree_limit)
-
-        y_pred_eval = 2.0/(1.0+np.exp(-2.0*y_pred_raw_eval))-1
-        y_pred_train = 2.0/(1.0+np.exp(-2.0*y_pred_raw_train))-1
-
-        np.save(join(out_dir, 'y_bdt_train.npy'), y_pred_train)
-        np.save(join(out_dir, 'y_bdt_eval.npy'), y_pred_eval)
-
-        np.save(join(out_dir, 'y_bdt_raw_train.npy'), y_pred_raw_train)
-        np.save(join(out_dir, 'y_bdt_raw_eval.npy'), y_pred_raw_eval)
+        print("Saving reduced data frame...")
+        # Create a data frame with bdt outputs and kinematics to calculate the working points
+        df_reduced = df.loc[xgb_bo_trainer.y_test.index,
+                            ["ele_pt", "scl_eta", "matchedToGenEle", "Fall17NoIsoV2RawVals", "genNpu"]]
+        df_reduced["bdt_score"] = xgb_bo_trainer.get_score("bo")
+        df_reduced.to_hdf(join(out_dir,'pt_eta_score.h5'), key='pt_eta_score')
