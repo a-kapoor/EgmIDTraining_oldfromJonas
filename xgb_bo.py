@@ -34,7 +34,9 @@ hyperparams_dict = {'min_child_weight': (1, 20),
 class XgbBoTrainer:
     """Trains a xgboost classifier with bayesian-optimized hyperparameters.
 
-    Attributes:
+    Public attributes:
+
+    Private attributes:
         _random_state (int): seed for random number generation
     """
 
@@ -70,22 +72,46 @@ class XgbBoTrainer:
             'objective'   : 'binary:logitraw',
             }
 
+        # Entries from the class with more entries are discarded. This is because
+        # classifier performance is usually bottlenecked by the size of the
+        # dataset for the class with fewer entries. Having one class with extra
+        # statistics usually just adds computing time.
         n_per_class = min(min(data[y_col].value_counts()), max_n_per_class)
+
+        # The number of entries per class can be limited by a parameter in case
+        # the dataset is just too large for this algorithm to run in a
+        # reasonable time.
         if not max_n_per_class is None:
             n_per_class = min(n_per_class, max_n_per_class)
+
         data = pd.concat([data[data[y_col] == 0].head(n_per_class),
                           data[data[y_col] == 1].head(n_per_class)])
 
-        self.X_train, self.X_test, self.y_train, self.y_test = train_test_split(data[X_cols], data[y_col],
-                                                        random_state=self._random_state, test_size=test_size)
+        # Split in testing and training subsamples
+        self.X_train, self.X_test, self.y_train, self.y_test = \
+                train_test_split(data[X_cols],
+                                 data[y_col],
+                                 random_state=self._random_state,
+                                 test_size=test_size)
 
+        # Save data in xgboosts DMatrix format so the encoding doesn't have to
+        # be repeated at every step of the Bayesian optimization.
         self._xgtrain = xgb.DMatrix(self.X_train, label=self.y_train)
         self._xgtest  = xgb.DMatrix(self.X_test, label=self.y_test)
 
-        self._bo = BayesianOptimization(self.evaluate_xgb, hyperparams_dict, random_state=self._random_state)
+        # Set up the Bayesian optimization
+        self._bo = BayesianOptimization(self.evaluate_xgb,
+                                        hyperparams_dict,
+                                        random_state=self._random_state)
 
+        # This list will memorize the number of rounds that each step in the
+        # Bayesian optimization was trained for before early stopping gets
+        # triggered. This way, we can train our final classifier with the
+        # correct n_estimators matching to the optimal hyperparameters.
         self._early_stoppings = []
 
+        # This dictionary will hold the xgboost models created when running
+        # this training class.
         self.models = {}
 
     def get_xgb_cv_result(self, params):
