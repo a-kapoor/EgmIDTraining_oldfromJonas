@@ -5,7 +5,6 @@ from bayes_opt import BayesianOptimization
 import xgboost as xgb
 from scipy.special import logit
 import pandas as pd
-import json
 import time
 
 # The space of hyperparameters for the Bayesian optimization
@@ -51,7 +50,7 @@ def merge_two_dicts(x, y):
     z.update(y)    # modifies z with y's keys and values & returns None
     return z
 
-def callback_overtraining(best_test_auc, verbose=True):
+def callback_overtraining(best_test_auc):
 
     def callback(env):
         train_auc = env.evaluation_result_list[0][1]
@@ -60,16 +59,13 @@ def callback_overtraining(best_test_auc, verbose=True):
         if train_auc < best_test_auc:
             return
 
-        if verbose:
-            print(train_auc - test_auc, 1 - best_test_auc)
-
         if train_auc - test_auc > 1 - best_test_auc:
             print("We have an overtraining problem! Stop boosting.")
             raise xgb.core.EarlyStopException(env.iteration)
 
     return callback
 
-def callback_timeout(max_time, best_test_auc, n_fit=10, verbose=True):
+def callback_timeout(max_time, best_test_auc, n_fit=10):
 
     start_time = time.time()
 
@@ -109,8 +105,20 @@ def callback_timeout(max_time, best_test_auc, n_fit=10, verbose=True):
             status['counter'] = 0
 
         if status['counter'] == n_fit:
-            print("Test AUC does not converge quick enough. Stop boosting.")
+            print("Test AUC does not converge well. Stop boosting.")
             raise xgb.core.EarlyStopException(env.iteration)
+
+    return callback
+
+def callback_print_info(n_skip=10):
+
+    def callback(env):
+        n = env.iteration
+        train_auc = env.evaluation_result_list[0][1]
+        test_auc  = env.evaluation_result_list[1][1]
+
+        if n % n_skip == 0:
+            print("[{0:4d}]\ttrain-auc:{1:.6f}\ttest-auc:{2:.6f}".format(n, train_auc, test_auc))
 
     return callback
 
@@ -123,7 +131,19 @@ class XgbBoTrainer:
         _random_state (int): seed for random number generation
     """
 
-    def __init__(self, data, X_cols, y_col):
+    def __init__(self, data, X_cols, y_col,
+                 random_state      = 2018,
+                 num_rounds_max    = 3000,
+                 early_stop_rounds = 10,
+                 nfold             = 3,
+                 init_points       = 5,
+                 n_iter            = 50,
+                 max_run_time      = 18000, # 5 h
+                 train_time_factor = 5,
+                 test_size         = 0.25,
+                 max_n_per_class   = None,
+                 nthread           = 16,
+            ):
         """The __init__ method for XgbBoTrainer class.
 
         Args:
@@ -134,26 +154,22 @@ class XgbBoTrainer:
                           classification. This column has to contain zeros and
                           ones.
         """
-        self._random_state      = 2018
-        self._num_rounds_max    = 3000
-        self._early_stop_rounds = 10
-        self._nfold             = 3
-        self._init_points       = 5
-        self._n_iter            = 50
-        self._verbose           = 1
-        self._max_run_time      = 120 # in minutes
+        self._random_state      = random_state
+        self._num_rounds_max    = num_rounds_max
+        self._early_stop_rounds = early_stop_rounds
+        self._nfold             = nfold
+        self._init_points       = init_points
+        self._n_iter            = n_iter
+        self._max_run_time      = max_run_time
+        self._train_time_factor = train_time_factor
 
         self._start_time        = None
         self._max_training_time = None
 
-        test_size       = 0.25
-        max_n_per_class = None
-        nthread         = 16
-
         self.params_base = {
-            'silent'      : 1-self._verbose,
+            'silent'      : 1,
             'eval_metric' : 'auc',
-            'verbose_eval': self._verbose,
+            'verbose_eval': 0,
             'seed'        : self._random_state,
             'nthread'     : nthread,
             'objective'   : 'binary:logitraw',
@@ -201,6 +217,8 @@ class XgbBoTrainer:
         # this training class.
         self.models = {}
 
+        self.cv_results = []
+
     def evaluate_xgb(self, **hyperparameters):
 
         params = format_params(merge_two_dicts(self.params_base,
@@ -209,7 +227,7 @@ class XgbBoTrainer:
         best_test_auc = self._bo.res["max"]["max_val"]
         if best_test_auc is None: best_test_auc = 0.0
 
-        if self._max_training_time is None:
+        if self._max_training_time is None and not self._train_time_factor is None:
             training_start_time = time.time()
 
         cv_result = xgb.cv(params, self._xgtrain,
@@ -217,15 +235,18 @@ class XgbBoTrainer:
                            nfold=self._nfold,
                            seed=self._random_state,
                            callbacks=[
-                               xgb.callback.early_stop(self._early_stop_rounds,   verbose=False),
-                               callback_overtraining(best_test_auc, verbose=False),
-                               callback_timeout(self._max_training_time, best_test_auc, n_fit=10, verbose=True), 
-                               ])
+                               callback_print_info(),
+                               xgb.callback.early_stop(self._early_stop_rounds, verbose=True),
+                               callback_overtraining(best_test_auc),
+                               callback_timeout(self._max_training_time, best_test_auc),
+                           ])
 
-        if self._max_training_time is None:
-            self._max_training_time = 2 * (time.time() - training_start_time)
+        if self._max_training_time is None and not self._train_time_factor is None:
+            self._max_training_time = self._train_time_factor * (time.time() - training_start_time)
 
         self._early_stops.append(len(cv_result))
+
+        self.cv_results.append(cv_result)
 
         return cv_result['test-auc-mean'].values[-1]
 
@@ -243,7 +264,7 @@ class XgbBoTrainer:
         for i in range(self._n_iter):
             self._bo.maximize(init_points=0, n_iter=1, acq='ei')
 
-            if time.time() - self._start_time > self._max_run_time * 60:
+            if not self._max_run_time is None and time.time() - self._start_time > self._max_run_time * 60:
                 print("Bayesian optimization timeout")
                 break
 
@@ -274,26 +295,26 @@ class XgbBoTrainer:
 
         return fpr, tpr, thresholds
 
-    def save_bo_res(self, file_name):
+    def get_results_df(self):
         res = dict(self._bo.res["all"])
-        d = {"results": []}
 
-        for i in range(len(res["params"])):
+        n = len(res["params"])
+        for i in range(n):
+            res["params"][i] = format_params(res["params"][i])
 
-            if i == 0:
-                step = "default"
-            elif i < self._init_points + 1:
-                step = "init"
-            else:
-                step = "bayes_opt"
+        n_iter_eff = n - 1 - self._init_points
 
-            d["results"].append({
-                "params" : format_params(res["params"][i]),
-                "test-auc-mean"  : res["values"][i],
-                "step"   : step,
-                })
+        data = {}
 
-            d["results"][i]["params"]["n_estimators"] = self._early_stops[i]
+        data["stage"]         = [0] + [1] * self._init_points + [2] * n_iter_eff
 
-        with open(file_name, 'w') as f:
-            f.write(json.dumps(d, indent=4, sort_keys=True))
+        for name in ["train-auc-mean", "train-auc-std",
+                     "test-auc-mean", "test-auc-std"]:
+            data[name] = [cvr[name].values[-1] for cvr in self.cv_results]
+
+        for k in hyperparams_ranges.keys():
+            data[k] = [res["params"][i][k] for i in range(n)]
+
+        data["n_estimators"] = self._early_stops
+
+        return pd.DataFrame(data=data)

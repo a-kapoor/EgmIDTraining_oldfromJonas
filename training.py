@@ -19,7 +19,7 @@ for idname in cfg["trainings"]:
         out_dir = join(out_dir_base, idname, training_bin)
 
         if not os.path.exists(out_dir):
-            os.makedirs(out_dir)
+            os.makedirs(join(out_dir))
 
         feature_cols = cfg["trainings"][idname][training_bin]["variables"]
 
@@ -29,9 +29,6 @@ for idname in cfg["trainings"]:
         root_file = uproot.open(ntuple_file)
         tree = root_file["ntuplizer/tree"]
 
-        # df = tree.pandas.df(feature_cols + ["ele_pt", "scl_eta", "matchedToGenEle", "Fall17NoIsoV2RawVals", "genNpu"], entrystop=5000000)
-        # df = tree.pandas.df(feature_cols + ["ele_pt", "scl_eta", "matchedToGenEle", "Fall17NoIsoV2RawVals", "genNpu"], entrystop=1000000)
-        # df = tree.pandas.df(feature_cols + ["ele_pt", "scl_eta", "matchedToGenEle", "Fall17NoIsoV2RawVals", "genNpu"], entrystop=10000)
         df = tree.pandas.df(feature_cols + ["ele_pt", "scl_eta", "matchedToGenEle", "Fall17NoIsoV2RawVals", "genNpu"], entrystop=None)
 
         df = df.query(cfg["selection_base"])
@@ -49,7 +46,13 @@ for idname in cfg["trainings"]:
                                    output_xml = tmvafile)
 
         print("Saving bayesian optimization results...")
-        xgb_bo_trainer.save_bo_res(join(out_dir, "xgb_bo_results.json"))
+        xgb_bo_trainer.get_results_df().to_csv(join(out_dir, "xgb_bo_results.csv"))
+
+        print("Saving individual cv results...")
+        if not os.path.exists(join(out_dir, "cv_results")):
+            os.makedirs(join(out_dir, "cv_results"))
+        for i, cvr in enumerate(xgb_bo_trainer.cv_results):
+            cvr.to_csv(join(out_dir, "cv_results", "{0:04d}.csv".format(i)))
 
         print("Saving reduced data frame...")
         # Create a data frame with bdt outputs and kinematics to calculate the working points
