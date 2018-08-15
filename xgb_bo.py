@@ -1,10 +1,12 @@
 from sklearn.model_selection import train_test_split
 from sklearn import metrics
-from numpy import argmax
+import numpy as np
 from bayes_opt import BayesianOptimization
 import xgboost as xgb
 from scipy.special import logit
 import pandas as pd
+import json
+import time
 
 # The space of hyperparameters for the Bayesian optimization
 hyperparams_ranges = {'min_child_weight': (1, 20),
@@ -49,7 +51,7 @@ def merge_two_dicts(x, y):
     z.update(y)    # modifies z with y's keys and values & returns None
     return z
 
-def overtraining_guard(best_test_auc, verbose=True):
+def callback_overtraining(best_test_auc, verbose=True):
 
     def callback(env):
         train_auc = env.evaluation_result_list[0][1]
@@ -58,9 +60,56 @@ def overtraining_guard(best_test_auc, verbose=True):
         if train_auc < best_test_auc:
             return
 
-        print(train_auc - test_auc, 1 - best_test_auc)
+        if verbose:
+            print(train_auc - test_auc, 1 - best_test_auc)
+
         if train_auc - test_auc > 1 - best_test_auc:
-            print("We probably have an overtraining problem! Stop boosting.")
+            print("We have an overtraining problem! Stop boosting.")
+            raise xgb.core.EarlyStopException(env.iteration)
+
+    return callback
+
+def callback_timeout(max_time, best_test_auc, n_fit=10, verbose=True):
+
+    start_time = time.time()
+
+    last_n_times = []
+    last_n_test_auc = []
+
+    status = {'counter': 0}
+
+    def callback(env):
+
+        if max_time == None:
+            return
+
+        run_time = time.time() - start_time
+
+        if run_time > max_time:
+            print("Xgboost training took too long. Stop boosting.")
+            raise xgb.core.EarlyStopException(env.iteration)
+
+        last_n_test_auc.append(env.evaluation_result_list[1][1])
+        if len(last_n_test_auc) > n_fit:
+            del last_n_test_auc[0]
+
+        last_n_times.append(run_time)
+        if len(last_n_times) > n_fit:
+            del last_n_times[0]
+
+        if len(last_n_test_auc) < n_fit:
+            return
+
+        poly = np.polyfit(last_n_times, last_n_test_auc, deg=1)
+        guessed_test_auc_at_max_time  = np.polyval(poly, max_time)
+
+        if guessed_test_auc_at_max_time < best_test_auc and best_test_auc > 0.0:
+            status['counter'] = status['counter'] + 1
+        else:
+            status['counter'] = 0
+
+        if status['counter'] == n_fit:
+            print("Test AUC does not converge quick enough. Stop boosting.")
             raise xgb.core.EarlyStopException(env.iteration)
 
     return callback
@@ -90,13 +139,16 @@ class XgbBoTrainer:
         self._early_stop_rounds = 10
         self._nfold             = 3
         self._init_points       = 5
-        self._n_iter            = 1
-        self._verbose           = 0
+        self._n_iter            = 50
+        self._verbose           = 1
+        self._max_run_time      = 120 # in minutes
 
-        test_size             = 0.25
-        max_n_per_class       = None
-        # max_n_per_class       = 200000
-        nthread               = 16
+        self._start_time        = None
+        self._max_training_time = None
+
+        test_size       = 0.25
+        max_n_per_class = None
+        nthread         = 16
 
         self.params_base = {
             'silent'      : 1-self._verbose,
@@ -157,14 +209,21 @@ class XgbBoTrainer:
         best_test_auc = self._bo.res["max"]["max_val"]
         if best_test_auc is None: best_test_auc = 0.0
 
+        if self._max_training_time is None:
+            training_start_time = time.time()
+
         cv_result = xgb.cv(params, self._xgtrain,
                            num_boost_round=self._num_rounds_max,
                            nfold=self._nfold,
                            seed=self._random_state,
                            callbacks=[
                                xgb.callback.early_stop(self._early_stop_rounds,   verbose=False),
-                               overtraining_guard(best_test_auc, verbose=True),
+                               callback_overtraining(best_test_auc, verbose=False),
+                               callback_timeout(self._max_training_time, best_test_auc, n_fit=10, verbose=True), 
                                ])
+
+        if self._max_training_time is None:
+            self._max_training_time = 2 * (time.time() - training_start_time)
 
         self._early_stops.append(len(cv_result))
 
@@ -172,11 +231,21 @@ class XgbBoTrainer:
 
     def run(self):
 
+        self._start_time = time.time()
+
         # Explore the default xgboost hyperparameters
         self._bo.explore({k:[v] for k, v in xgb_default.items()}, eager=True)
 
         # Do the Bayesian optimization
-        self._bo.maximize(init_points=self._init_points, n_iter=self._n_iter, acq='ei')
+        self._bo.maximize(init_points=self._init_points, n_iter=0, acq='ei')
+
+        self._started_bo = True
+        for i in range(self._n_iter):
+            self._bo.maximize(init_points=0, n_iter=1, acq='ei')
+
+            if time.time() - self._start_time > self._max_run_time * 60:
+                print("Bayesian optimization timeout")
+                break
 
         # Set up the parameters for the default training
         params_default = merge_two_dicts(self.params_base, xgb_default)
@@ -185,7 +254,7 @@ class XgbBoTrainer:
         # Set up the parameters for the Bayesian-optimized training
         params_bo = merge_two_dicts(self.params_base,
                                     format_params(self._bo.res["max"]["max_params"]))
-        params_bo["n_estimators"] = self._early_stops[argmax(self._bo.res["all"]["values"])]
+        params_bo["n_estimators"] = self._early_stops[np.argmax(self._bo.res["all"]["values"])]
 
         # Fit default model to test sample
         self.models["default"] = xgb.XGBClassifier(**params_default)
@@ -204,3 +273,27 @@ class XgbBoTrainer:
         fpr, tpr, thresholds = metrics.roc_curve(self.y_test, self.get_score(model_name))
 
         return fpr, tpr, thresholds
+
+    def save_bo_res(self, file_name):
+        res = dict(self._bo.res["all"])
+        d = {"results": []}
+
+        for i in range(len(res["params"])):
+
+            if i == 0:
+                step = "default"
+            elif i < self._init_points + 1:
+                step = "init"
+            else:
+                step = "bayes_opt"
+
+            d["results"].append({
+                "params" : format_params(res["params"][i]),
+                "test-auc-mean"  : res["values"][i],
+                "step"   : step,
+                })
+
+            d["results"][i]["params"]["n_estimators"] = self._early_stops[i]
+
+        with open(file_name, 'w') as f:
+            f.write(json.dumps(d, indent=4, sort_keys=True))

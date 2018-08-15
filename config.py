@@ -72,11 +72,11 @@ cfg["trainings"] = {}
 cfg["trainings"]["Fall17NoIsoV2"] = {}
 
 # NoIso ID
-# cfg["trainings"]["Fall17NoIsoV2"]["EB1_5"] = {
-        # "cut": "ele_pt < 10. & abs(scl_eta) < 0.800",
-        # "variables": variables_noiso_eb,
-        # "label": r'EB1 5 - 5 < $p_T$ < 10 GeV, ($|\eta| < 0.8$)',
-        # }
+cfg["trainings"]["Fall17NoIsoV2"]["EB1_5"] = {
+        "cut": "ele_pt < 10. & abs(scl_eta) < 0.800",
+        "variables": variables_noiso_eb,
+        "label": r'EB1 5 - 5 < $p_T$ < 10 GeV, ($|\eta| < 0.8$)',
+        }
 
 # cfg["trainings"]["Fall17NoIsoV2"]["EB2_5"] = {
         # "cut": "ele_pt < 10. & abs(scl_eta) >= 0.800 && abs(scl_eta) < 1.479",
@@ -90,11 +90,11 @@ cfg["trainings"]["Fall17NoIsoV2"] = {}
         # "label": r'EE 5 - 5 < $p_T$ < 10 GeV',
         # }
 
-cfg["trainings"]["Fall17NoIsoV2"]["EB1_10"] = {
-        "cut": "ele_pt >= 10. & abs(scl_eta) < 0.800",
-        "variables": variables_noiso_eb,
-        "label": r'EB1 10 - $p_T$ > 10 GeV, ($|\eta| < 0.8$)',
-        }
+# cfg["trainings"]["Fall17NoIsoV2"]["EB1_10"] = {
+        # "cut": "ele_pt >= 10. & abs(scl_eta) < 0.800",
+        # "variables": variables_noiso_eb,
+        # "label": r'EB1 10 - $p_T$ > 10 GeV, ($|\eta| < 0.8$)',
+        # }
 
 # cfg["trainings"]["Fall17NoIsoV2"]["EB2_10"] = {
         # "cut": "ele_pt >= 10. & abs(scl_eta) >= 0.800 && abs(scl_eta) < 1.479",

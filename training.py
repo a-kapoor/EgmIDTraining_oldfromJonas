@@ -29,7 +29,10 @@ for idname in cfg["trainings"]:
         root_file = uproot.open(ntuple_file)
         tree = root_file["ntuplizer/tree"]
 
-        df = tree.pandas.df(feature_cols + ["ele_pt", "scl_eta", "matchedToGenEle", "Fall17NoIsoV2RawVals", "genNpu"], entrystop=5000000)
+        # df = tree.pandas.df(feature_cols + ["ele_pt", "scl_eta", "matchedToGenEle", "Fall17NoIsoV2RawVals", "genNpu"], entrystop=5000000)
+        # df = tree.pandas.df(feature_cols + ["ele_pt", "scl_eta", "matchedToGenEle", "Fall17NoIsoV2RawVals", "genNpu"], entrystop=1000000)
+        # df = tree.pandas.df(feature_cols + ["ele_pt", "scl_eta", "matchedToGenEle", "Fall17NoIsoV2RawVals", "genNpu"], entrystop=10000)
+        df = tree.pandas.df(feature_cols + ["ele_pt", "scl_eta", "matchedToGenEle", "Fall17NoIsoV2RawVals", "genNpu"], entrystop=None)
 
         df = df.query(cfg["selection_base"])
         df = df.query(cfg["trainings"][idname][training_bin]["cut"])
@@ -45,9 +48,13 @@ for idname in cfg["trainings"]:
                                    input_variables = list(zip(feature_cols, len(feature_cols)*['F'])),
                                    output_xml = tmvafile)
 
+        print("Saving bayesian optimization results...")
+        xgb_bo_trainer.save_bo_res(join(out_dir, "xgb_bo_results.json"))
+
         print("Saving reduced data frame...")
         # Create a data frame with bdt outputs and kinematics to calculate the working points
         df_reduced = df.loc[xgb_bo_trainer.y_test.index,
                             ["ele_pt", "scl_eta", "matchedToGenEle", "Fall17NoIsoV2RawVals", "genNpu"]]
-        df_reduced["bdt_score"] = xgb_bo_trainer.get_score("bo")
+        df_reduced["bdt_score_default"] = xgb_bo_trainer.get_score("default")
+        df_reduced["bdt_score_bo"] = xgb_bo_trainer.get_score("bo")
         df_reduced.to_hdf(join(out_dir,'pt_eta_score.h5'), key='pt_eta_score')
