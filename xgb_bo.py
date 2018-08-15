@@ -6,24 +6,8 @@ import xgboost as xgb
 from scipy.special import logit
 import pandas as pd
 
-def format_params(params):
-
-    p = dict(params)
-    p['min_child_weight'] = p["min_child_weight"]
-    p['colsample_bytree'] = max(min(p["colsample_bytree"], 1), 0)
-    p['max_depth']        = int(p["max_depth"])
-    p['subsample']        = max(min(p["subsample"], 1), 0)
-    p['gamma']            = max(p["gamma"], 0)
-    p['reg_alpha']        = max(p["reg_alpha"], 0)
-    p['reg_lambda']       = max(p["reg_lambda"], 0)
-    return p
-
-def merge_two_dicts(x, y):
-    z = x.copy()   # start with x's keys and values
-    z.update(y)    # modifies z with y's keys and values & returns None
-    return z
-
-hyperparams_dict = {'min_child_weight': (1, 20),
+# The space of hyperparameters for the Bayesian optimization
+hyperparams_ranges = {'min_child_weight': (1, 20),
                     'colsample_bytree': (0.1, 1),
                     'max_depth': (2, 15),
                     'subsample': (0.5, 1),
@@ -39,6 +23,47 @@ xgb_default = {'min_child_weight': 1,
                'gamma': 0,
                'reg_alpha': 0,
                'reg_lambda': 1}
+
+def format_params(params):
+    """ Casts the hyperparameters to the required type and range.
+    """
+    p = dict(params)
+    p['min_child_weight'] = p["min_child_weight"]
+    p['colsample_bytree'] = max(min(p["colsample_bytree"], 1), 0)
+    p['max_depth']        = int(p["max_depth"])
+    p['subsample']        = max(min(p["subsample"], 1), 0)
+    p['gamma']            = max(p["gamma"], 0)
+    p['reg_alpha']        = max(p["reg_alpha"], 0)
+    p['reg_lambda']       = max(p["reg_lambda"], 0)
+    return p
+
+def merge_two_dicts(x, y):
+    """ Merge two dictionaries.
+
+    Writing such a function is necessary in Python 2.
+
+    In Python 3, one can just do:
+        d_merged = {**d1, **d2}.
+    """
+    z = x.copy()   # start with x's keys and values
+    z.update(y)    # modifies z with y's keys and values & returns None
+    return z
+
+def overtraining_guard(best_test_auc, verbose=True):
+
+    def callback(env):
+        train_auc = env.evaluation_result_list[0][1]
+        test_auc = env.evaluation_result_list[1][1]
+
+        if train_auc < best_test_auc:
+            return
+
+        print(train_auc - test_auc, 1 - best_test_auc)
+        if train_auc - test_auc > 1 - best_test_auc:
+            print("We probably have an overtraining problem! Stop boosting.")
+            raise xgb.core.EarlyStopException(env.iteration)
+
+    return callback
 
 class XgbBoTrainer:
     """Trains a xgboost classifier with Bayesian-optimized hyperparameters.
@@ -60,23 +85,23 @@ class XgbBoTrainer:
                           classification. This column has to contain zeros and
                           ones.
         """
-        self._random_state          = 2018
-        self._num_rounds_max        = 3000
+        self._random_state      = 2018
+        self._num_rounds_max    = 3000
         self._early_stop_rounds = 10
-        self._nfold                 = 3
-        self._init_points           = 5
-        self._n_iter                = 1
+        self._nfold             = 3
+        self._init_points       = 5
+        self._n_iter            = 1
+        self._verbose           = 0
 
         test_size             = 0.25
-        # max_n_per_class       = None
-        max_n_per_class       = 20000
+        max_n_per_class       = None
+        # max_n_per_class       = 200000
         nthread               = 16
-        verbose               = 1
 
         self.params_base = {
-            'silent'      : 1-verbose,
+            'silent'      : 1-self._verbose,
             'eval_metric' : 'auc',
-            'verbose_eval': verbose,
+            'verbose_eval': self._verbose,
             'seed'        : self._random_state,
             'nthread'     : nthread,
             'objective'   : 'binary:logitraw',
@@ -111,7 +136,7 @@ class XgbBoTrainer:
 
         # Set up the Bayesian optimization
         self._bo = BayesianOptimization(self.evaluate_xgb,
-                                        hyperparams_dict,
+                                        hyperparams_ranges,
                                         random_state=self._random_state)
 
         # This list will memorize the number of rounds that each step in the
@@ -129,18 +154,21 @@ class XgbBoTrainer:
         params = format_params(merge_two_dicts(self.params_base,
                                                hyperparameters))
 
+        best_test_auc = self._bo.res["max"]["max_val"]
+        if best_test_auc is None: best_test_auc = 0.0
+
         cv_result = xgb.cv(params, self._xgtrain,
                            num_boost_round=self._num_rounds_max,
                            nfold=self._nfold,
                            seed=self._random_state,
-                           callbacks=[xgb.callback.early_stop(self._early_stop_rounds)])
+                           callbacks=[
+                               xgb.callback.early_stop(self._early_stop_rounds,   verbose=False),
+                               overtraining_guard(best_test_auc, verbose=True),
+                               ])
 
         self._early_stops.append(len(cv_result))
 
-        auc = cv_result['test-auc-mean'].values[-1]
-        y = -logit(1-auc)
-
-        return y
+        return cv_result['test-auc-mean'].values[-1]
 
     def run(self):
 
