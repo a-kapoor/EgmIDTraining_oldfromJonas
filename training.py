@@ -57,7 +57,7 @@ for idname in cfg["trainings"]:
         print("Saving reduced data frame...")
         # Create a data frame with bdt outputs and kinematics to calculate the working points
         df_reduced = df.loc[xgb_bo_trainer.y_test.index,
-                            ["ele_pt", "scl_eta", "matchedToGenEle", "Fall17NoIsoV2RawVals", "genNpu"]]
+                            ["ele_pt", "scl_eta", "y", "Fall17NoIsoV2RawVals", "genNpu"]]
         df_reduced["bdt_score_default"] = xgb_bo_trainer.get_score("default")
         df_reduced["bdt_score_bo"] = xgb_bo_trainer.get_score("bo")
         df_reduced.to_hdf(join(out_dir,'pt_eta_score.h5'), key='pt_eta_score')

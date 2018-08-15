@@ -1,5 +1,5 @@
 import os
-# import numpy as np
+import numpy as np
 
 if 'CMSSW_BASE' in os.environ:
     cmssw_base = os.environ['CMSSW_BASE']
@@ -72,56 +72,55 @@ cfg["trainings"] = {}
 cfg["trainings"]["Fall17NoIsoV2"] = {}
 
 # NoIso ID
-# cfg["trainings"]["Fall17NoIsoV2"]["EB1_5"] = {
-        # "cut": "ele_pt < 10. & abs(scl_eta) < 0.800",
-        # "variables": variables_noiso_eb,
-        # "label": r'EB1 5 - 5 < $p_T$ < 10 GeV, ($|\eta| < 0.8$)',
-        # }
+cfg["trainings"]["Fall17NoIsoV2"]["EB1_5"] = {
+        "cut": "ele_pt < 10. & abs(scl_eta) < 0.800",
+        "variables": variables_noiso_eb,
+        "label": r'EB1 5 - 5 < $p_T$ < 10 GeV, ($|\eta| < 0.8$)',
+        }
 
 # cfg["trainings"]["Fall17NoIsoV2"]["EB2_5"] = {
-        # "cut": "ele_pt < 10. & abs(scl_eta) >= 0.800 && abs(scl_eta) < 1.479",
+        # "cut": "ele_pt < 10. & abs(scl_eta) >= 0.800 & abs(scl_eta) < 1.479",
         # "variables": variables_noiso_eb,
         # "label": r'EB2 5 - 5 < $p_T$ < 10 GeV, ($|\eta| > 0.8$)',
         # }
 
-cfg["trainings"]["Fall17NoIsoV2"]["EE_5"] = {
-        "cut": "ele_pt < 10. & abs(scl_eta) >= 1.479",
-        "variables": variables_noiso_ee,
-        "label": r'EE 5 - 5 < $p_T$ < 10 GeV',
-        }
-
-# cfg["trainings"]["Fall17NoIsoV2"]["EB1_10"] = {
-        # "cut": "ele_pt >= 10. & abs(scl_eta) < 0.800",
-        # "variables": variables_noiso_eb,
-        # "label": r'EB1 10 - $p_T$ > 10 GeV, ($|\eta| < 0.8$)',
+# cfg["trainings"]["Fall17NoIsoV2"]["EE_5"] = {
+        # "cut": "ele_pt < 10. & abs(scl_eta) >= 1.479",
+        # "variables": variables_noiso_ee,
+        # "label": r'EE 5 - 5 < $p_T$ < 10 GeV',
         # }
 
+cfg["trainings"]["Fall17NoIsoV2"]["EB1_10"] = {
+        "cut": "ele_pt >= 10. & abs(scl_eta) < 0.800",
+        "variables": variables_noiso_eb,
+        "label": r'EB1 10 - $p_T$ > 10 GeV, ($|\eta| < 0.8$)',
+        }
+
 # cfg["trainings"]["Fall17NoIsoV2"]["EB2_10"] = {
-        # "cut": "ele_pt >= 10. & abs(scl_eta) >= 0.800 && abs(scl_eta) < 1.479",
+        # "cut": "ele_pt >= 10. & abs(scl_eta) >= 0.800 & abs(scl_eta) < 1.479",
         # "variables": variables_noiso_eb,
         # "label": r'EB2 10 - $p_T$ > 10 GeV, ($|\eta| > 0.8$)',
         # }
 
-cfg["trainings"]["Fall17NoIsoV2"]["EE_10"] = {
-        "cut": "ele_pt >= 10. & abs(scl_eta) >= 1.479",
-        "variables": variables_noiso_ee,
-        "label": r'EE 10 - $p_T$ > 10 GeV',
-        }
+# cfg["trainings"]["Fall17NoIsoV2"]["EE_10"] = {
+        # "cut": "ele_pt >= 10. & abs(scl_eta) >= 1.479",
+        # "variables": variables_noiso_ee,
+        # "label": r'EE 10 - $p_T$ > 10 GeV',
+        # }
 
 # Iso ID
 cfg["trainings"]["Fall17IsoV2"] = dict(cfg["trainings"]["Fall17NoIsoV2"])
-# cfg["trainings"]["Fall17IsoV2"]["EB1_5"]["variables"] = variables_iso_eb
+cfg["trainings"]["Fall17IsoV2"]["EB1_5"]["variables"] = variables_iso_eb
 # cfg["trainings"]["Fall17IsoV2"]["EB2_5"]["variables"] = variables_iso_eb
-cfg["trainings"]["Fall17IsoV2"]["EE_5"]["variables"] = variables_iso_ee
-# cfg["trainings"]["Fall17IsoV2"]["EB1_10"]["variables"] = variables_iso_eb
+# cfg["trainings"]["Fall17IsoV2"]["EE_5"]["variables"] = variables_iso_ee
+cfg["trainings"]["Fall17IsoV2"]["EB1_10"]["variables"] = variables_iso_eb
 # cfg["trainings"]["Fall17IsoV2"]["EB2_10"]["variables"] = variables_iso_eb
-cfg["trainings"]["Fall17IsoV2"]["EE_10"]["variables"] = variables_iso_ee
+# cfg["trainings"]["Fall17IsoV2"]["EE_10"]["variables"] = variables_iso_ee
 
 ################################
 # Configuring the working points
 ################################
 
-"""
 wp90_target = np.loadtxt("wp90.txt", skiprows=1)
 wp80_target = np.loadtxt("wp80.txt", skiprows=1)
 
@@ -185,7 +184,6 @@ cfg["working_points"]["Fall17IsoV2"]["mvaEleID-Fall17-iso-V2-wpHZZ"] = {
         "targets": [0.8164452295491703, 0.803096754509744, 0.7437667128195914, 0.9744637118403502, 0.9668337528255658, 0.9662211869474129], # From Spring16HZZ with combinedIso < 0.35
         "match_boundary": False
         }
-"""
 
 #####################
 # CMSSW configuration

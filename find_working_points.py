@@ -4,6 +4,7 @@ import numpy as np
 from os.path import join
 import matplotlib.pyplot as plt
 from scipy.optimize import curve_fit
+import pandas as pd
 
 out_dir_base = join(cfg["out_dir"], cfg['submit_version'])
 
@@ -11,6 +12,12 @@ def wpfunc(x, c, tau, A):
     return c - np.exp(-x / tau) * A
 
 d = {}
+
+def load_df(idname, cat):
+    df = pd.read_hdf(join(out_dir_base, idname, cat,'pt_eta_score.h5'))
+    if not "y" in df.columns:
+        df.eval('y = ({0}) + 2 * ({1}) - 1'.format(cfg["selection_bkg"], cfg["selection_sig"]))
+    return df
 
 for idname in cfg['working_points']:
     d[idname] = {}
@@ -26,17 +33,18 @@ for idname in cfg['working_points']:
         print("    - working point {}...".format(wpname))
 
         for i, cat in enumerate(cfgwp['categories']):
+            print("        category " + cat)
 
-            out_dir = join(out_dir_base, idname, cat)
-            y = np.load(join(out_dir, 'y_eval.npy'))
-            y_pred = np.load(join(out_dir, 'y_bdt_raw_eval.npy'))
+            df = load_df(idname, cat)
+            y = df["y"].values
+            y_pred = df["bdt_score_bo"].values
 
             if wptype == 'constant_cut_sig_eff_targets':
 
                 wp[cat] = np.percentile(y_pred[y == True], (1-cfgwp['targets'][i]) * 100)
 
                 if 'match_boundary' in cfgwp and cfgwp['match_boundary']:
-                    pt = np.load(join(out_dir, 'pt_eval.npy'))
+                    pt = df["pt"].values
                     if '5' in cat:
                         sel = np.logical_and.reduce([y == True, pt >= 9.5, pt < 10.0])
                     elif '10' in cat:
@@ -45,7 +53,7 @@ for idname in cfg['working_points']:
 
 
             if wptype == 'pt_scaling_cut_sig_eff_targets':
-                pt = np.load(join(out_dir, 'pt_eval.npy'))
+                pt = df["ele_pt"].values
                 x = np.zeros(len(cfgwp['ptbins']))
                 x[:] = np.nan
                 pt_c = np.mean(cfgwp['ptbins'], axis=1)
@@ -75,23 +83,16 @@ for idname in cfg['working_points']:
             if wptype == 'constant_cut_sig_eff_targets':
                 for i, cat in enumerate(cfgwp['categories']):
                     if '5' in cat:
-                        out_dir = join(out_dir_base, idname, cat)
-                        y = np.load(join(out_dir, 'y_eval.npy'))
-                        y_pred = np.load(join(out_dir, 'y_bdt_raw_eval.npy'))
-                        pt = np.load(join(out_dir, 'pt_eval.npy'))
-                        sel = np.logical_and.reduce([y == True, pt >= 9.5, pt < 10.0])
-                        wp_boundary = np.percentile(y_pred[sel], (1-eff_boundaries[cat.replace('5', '10')]) * 100)
-                        wp[cat] = wp_boundary
+                        df = load_df(idname, cat)
+                        df = df.query("y == 1 & ele_pt >= 9.5 & ele_pt < 10.0")
+                        wp[cat] = df["bdt_score_bo"].quantile(1-eff_boundaries[cat.replace('5', '10')])
 
             if wptype == 'pt_scaling_cut_sig_eff_targets':
                 for i, cat in enumerate(cfgwp['categories']):
                     if '5' in cat:
-                        out_dir = join(out_dir_base, idname, cat)
-                        y = np.load(join(out_dir, 'y_eval.npy'))
-                        y_pred = np.load(join(out_dir, 'y_bdt_raw_eval.npy'))
-                        pt = np.load(join(out_dir, 'pt_eval.npy'))
-                        sel = np.logical_and.reduce([y == True, pt >= 9.5, pt < 10.0])
-                        wp_boundary = np.percentile(y_pred[sel], (1-eff_boundaries[cat.replace('5', '10')]) * 100)
+                        df = load_df(idname, cat)
+                        df = df.query("y == 1 & ele_pt >= 9.5 & ele_pt < 10.0")
+                        wp_boundary = df["bdt_score_bo"].quantile(1-eff_boundaries[cat.replace('5', '10')])
                         wp[cat]['c'] = wp[cat]['c'] - wpfunc(9.75, wp[cat]['c'], wp[cat]['tau'], wp[cat]['A']) + wp_boundary
 
         d[idname][wpname] = wp
