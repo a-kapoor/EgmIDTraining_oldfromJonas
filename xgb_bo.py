@@ -31,8 +31,17 @@ hyperparams_dict = {'min_child_weight': (1, 20),
                     'reg_alpha': (0, 10),
                     'reg_lambda': (0, 10)}
 
+# The default xgboost parameters
+xgb_default = {'min_child_weight': 1,
+               'colsample_bytree': 1,
+               'max_depth': 6,
+               'subsample': 1,
+               'gamma': 0,
+               'reg_alpha': 0,
+               'reg_lambda': 1}
+
 class XgbBoTrainer:
-    """Trains a xgboost classifier with bayesian-optimized hyperparameters.
+    """Trains a xgboost classifier with Bayesian-optimized hyperparameters.
 
     Public attributes:
 
@@ -53,14 +62,15 @@ class XgbBoTrainer:
         """
         self._random_state          = 2018
         self._num_rounds_max        = 3000
-        self._early_stopping_rounds = 50
+        self._early_stop_rounds = 10
         self._nfold                 = 3
         self._init_points           = 5
-        self._n_iter                = 10
+        self._n_iter                = 1
 
         test_size             = 0.25
-        max_n_per_class       = None
-        nthread               = 8
+        # max_n_per_class       = None
+        max_n_per_class       = 20000
+        nthread               = 16
         verbose               = 1
 
         self.params_base = {
@@ -108,43 +118,24 @@ class XgbBoTrainer:
         # Bayesian optimization was trained for before early stopping gets
         # triggered. This way, we can train our final classifier with the
         # correct n_estimators matching to the optimal hyperparameters.
-        self._early_stoppings = []
+        self._early_stops = []
 
         # This dictionary will hold the xgboost models created when running
         # this training class.
         self.models = {}
 
-    def get_xgb_cv_result(self, params):
-        return xgb.cv(params, self._xgtrain, num_boost_round=self._num_rounds_max, nfold=self._nfold,
-             seed=self._random_state,
-             callbacks=[xgb.callback.early_stop(self._early_stopping_rounds)])
+    def evaluate_xgb(self, **hyperparameters):
 
+        params = format_params(merge_two_dicts(self.params_base,
+                                               hyperparameters))
 
-    def evaluate_xgb(self,
-                     min_child_weight,
-                     colsample_bytree,
-                     max_depth,
-                     subsample,
-                     gamma,
-                     reg_alpha,
-                     reg_lambda,
-                    ):
+        cv_result = xgb.cv(params, self._xgtrain,
+                           num_boost_round=self._num_rounds_max,
+                           nfold=self._nfold,
+                           seed=self._random_state,
+                           callbacks=[xgb.callback.early_stop(self._early_stop_rounds)])
 
-        params = dict(self.params_base)
-
-        # hyperparameters to tune
-        params['min_child_weight'] = min_child_weight
-        params['colsample_bytree'] = colsample_bytree
-        params['max_depth']        = max_depth
-        params['subsample']        = subsample
-        params['gamma']            = gamma
-        params['reg_alpha']        = reg_alpha
-        params['reg_lambda']       = reg_lambda
-        params = format_params(params)
-
-        cv_result = self.get_xgb_cv_result(params)
-
-        self._early_stoppings.append(len(cv_result))
+        self._early_stops.append(len(cv_result))
 
         auc = cv_result['test-auc-mean'].values[-1]
         y = -logit(1-auc)
@@ -153,18 +144,30 @@ class XgbBoTrainer:
 
     def run(self):
 
-        # Get the early stopping rounds for default hyperparameters
-        early_stopping_init = len(self.get_xgb_cv_result(self.params_base))
+        # Explore the default xgboost hyperparameters
+        self._bo.explore({k:[v] for k, v in xgb_default.items()}, eager=True)
 
+        # Do the Bayesian optimization
         self._bo.maximize(init_points=self._init_points, n_iter=self._n_iter, acq='ei')
-        params_bo = format_params(self._bo.res["max"]["max_params"])
-        early_stopping_bo = self._early_stoppings[argmax(self._bo.res["all"]["values"])]
 
-        self.models["default"] = xgb.XGBClassifier(n_estimators=early_stopping_init, **self.params_base)
+        # Set up the parameters for the default training
+        params_default = merge_two_dicts(self.params_base, xgb_default)
+        params_default["n_estimators"] = self._early_stops[0]
+
+        # Set up the parameters for the Bayesian-optimized training
+        params_bo = merge_two_dicts(self.params_base,
+                                    format_params(self._bo.res["max"]["max_params"]))
+        params_bo["n_estimators"] = self._early_stops[argmax(self._bo.res["all"]["values"])]
+
+        # Fit default model to test sample
+        self.models["default"] = xgb.XGBClassifier(**params_default)
         self.models["default"].fit(self.X_train, self.y_train)
 
-        self.models["bo"] = xgb.XGBClassifier(n_estimators=early_stopping_bo, **merge_two_dicts(self.params_base, params_bo))
+        # Fit Bayesian-optimized model to test sample
+        self.models["bo"] = xgb.XGBClassifier(**params_bo)
         self.models["bo"].fit(self.X_train,self.y_train)
+
+        return self._bo.res
 
     def get_score(self, model_name):
         return self.models[model_name]._Booster.predict(self._xgtest)

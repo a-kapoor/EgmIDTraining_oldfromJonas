@@ -29,7 +29,7 @@ for idname in cfg["trainings"]:
         root_file = uproot.open(ntuple_file)
         tree = root_file["ntuplizer/tree"]
 
-        df = tree.pandas.df(feature_cols + ["ele_pt", "scl_eta", "matchedToGenEle", "Fall17NoIsoV2RawVals", "genNpu"], entrystop=None)
+        df = tree.pandas.df(feature_cols + ["ele_pt", "scl_eta", "matchedToGenEle", "Fall17NoIsoV2RawVals", "genNpu"], entrystop=50000)
 
         df = df.query(cfg["selection_base"])
         df = df.query(cfg["trainings"][idname][training_bin]["cut"])
