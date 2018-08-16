@@ -28,9 +28,12 @@ substitutes = {
 for key in substitutes:
     substitutes[key] = join(plot_dir, substitutes[key])
 
+if not os.path.exists("slides"):
+    os.makedirs("slides")
+
 with open("slides_template.tex", 'r') as template:
     lines = template.readlines()
-    with open("slides_{}.tex".format(cfg['submit_version']), 'w') as slides:
+    with open(join("slides", cfg['submit_version']+".tex"), 'w') as slides:
 
         for l in lines:
             for s in substitutes:

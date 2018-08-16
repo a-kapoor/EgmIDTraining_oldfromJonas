@@ -138,7 +138,7 @@ class XgbBoTrainer:
                  nfold             = 3,
                  init_points       = 5,
                  n_iter            = 50,
-                 max_run_time      = 18000, # 5 h
+                 max_run_time      = 180000, # 50 h
                  train_time_factor = 5,
                  test_size         = 0.25,
                  max_n_per_class   = None,
@@ -264,7 +264,7 @@ class XgbBoTrainer:
         for i in range(self._n_iter):
             self._bo.maximize(init_points=0, n_iter=1, acq='ei')
 
-            if not self._max_run_time is None and time.time() - self._start_time > self._max_run_time * 60:
+            if not self._max_run_time is None and time.time() - self._start_time > self._max_run_time:
                 print("Bayesian optimization timeout")
                 break
 

@@ -78,17 +78,17 @@ cfg["trainings"]["Fall17NoIsoV2"]["EB1_5"] = {
         "label": r'EB1 5 - 5 < $p_T$ < 10 GeV, ($|\eta| < 0.8$)',
         }
 
-# cfg["trainings"]["Fall17NoIsoV2"]["EB2_5"] = {
-        # "cut": "ele_pt < 10. & abs(scl_eta) >= 0.800 & abs(scl_eta) < 1.479",
-        # "variables": variables_noiso_eb,
-        # "label": r'EB2 5 - 5 < $p_T$ < 10 GeV, ($|\eta| > 0.8$)',
-        # }
+cfg["trainings"]["Fall17NoIsoV2"]["EB2_5"] = {
+        "cut": "ele_pt < 10. & abs(scl_eta) >= 0.800 & abs(scl_eta) < 1.479",
+        "variables": variables_noiso_eb,
+        "label": r'EB2 5 - 5 < $p_T$ < 10 GeV, ($|\eta| > 0.8$)',
+        }
 
-# cfg["trainings"]["Fall17NoIsoV2"]["EE_5"] = {
-        # "cut": "ele_pt < 10. & abs(scl_eta) >= 1.479",
-        # "variables": variables_noiso_ee,
-        # "label": r'EE 5 - 5 < $p_T$ < 10 GeV',
-        # }
+cfg["trainings"]["Fall17NoIsoV2"]["EE_5"] = {
+        "cut": "ele_pt < 10. & abs(scl_eta) >= 1.479",
+        "variables": variables_noiso_ee,
+        "label": r'EE 5 - 5 < $p_T$ < 10 GeV',
+        }
 
 cfg["trainings"]["Fall17NoIsoV2"]["EB1_10"] = {
         "cut": "ele_pt >= 10. & abs(scl_eta) < 0.800",
@@ -96,26 +96,26 @@ cfg["trainings"]["Fall17NoIsoV2"]["EB1_10"] = {
         "label": r'EB1 10 - $p_T$ > 10 GeV, ($|\eta| < 0.8$)',
         }
 
-# cfg["trainings"]["Fall17NoIsoV2"]["EB2_10"] = {
-        # "cut": "ele_pt >= 10. & abs(scl_eta) >= 0.800 & abs(scl_eta) < 1.479",
-        # "variables": variables_noiso_eb,
-        # "label": r'EB2 10 - $p_T$ > 10 GeV, ($|\eta| > 0.8$)',
-        # }
+cfg["trainings"]["Fall17NoIsoV2"]["EB2_10"] = {
+        "cut": "ele_pt >= 10. & abs(scl_eta) >= 0.800 & abs(scl_eta) < 1.479",
+        "variables": variables_noiso_eb,
+        "label": r'EB2 10 - $p_T$ > 10 GeV, ($|\eta| > 0.8$)',
+        }
 
-# cfg["trainings"]["Fall17NoIsoV2"]["EE_10"] = {
-        # "cut": "ele_pt >= 10. & abs(scl_eta) >= 1.479",
-        # "variables": variables_noiso_ee,
-        # "label": r'EE 10 - $p_T$ > 10 GeV',
-        # }
+cfg["trainings"]["Fall17NoIsoV2"]["EE_10"] = {
+        "cut": "ele_pt >= 10. & abs(scl_eta) >= 1.479",
+        "variables": variables_noiso_ee,
+        "label": r'EE 10 - $p_T$ > 10 GeV',
+        }
 
 # Iso ID
 cfg["trainings"]["Fall17IsoV2"] = dict(cfg["trainings"]["Fall17NoIsoV2"])
 cfg["trainings"]["Fall17IsoV2"]["EB1_5"]["variables"] = variables_iso_eb
-# cfg["trainings"]["Fall17IsoV2"]["EB2_5"]["variables"] = variables_iso_eb
-# cfg["trainings"]["Fall17IsoV2"]["EE_5"]["variables"] = variables_iso_ee
+cfg["trainings"]["Fall17IsoV2"]["EB2_5"]["variables"] = variables_iso_eb
+cfg["trainings"]["Fall17IsoV2"]["EE_5"]["variables"] = variables_iso_ee
 cfg["trainings"]["Fall17IsoV2"]["EB1_10"]["variables"] = variables_iso_eb
-# cfg["trainings"]["Fall17IsoV2"]["EB2_10"]["variables"] = variables_iso_eb
-# cfg["trainings"]["Fall17IsoV2"]["EE_10"]["variables"] = variables_iso_ee
+cfg["trainings"]["Fall17IsoV2"]["EB2_10"]["variables"] = variables_iso_eb
+cfg["trainings"]["Fall17IsoV2"]["EE_10"]["variables"] = variables_iso_ee
 
 ################################
 # Configuring the working points

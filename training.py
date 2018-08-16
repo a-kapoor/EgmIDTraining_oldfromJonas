@@ -1,4 +1,3 @@
-import xgboost as xgb
 from config import cfg
 import os
 import numpy as np

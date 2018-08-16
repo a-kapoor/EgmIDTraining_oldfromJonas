@@ -46,9 +46,12 @@ for idname in cfg["cmssw_cff"]:
     n_cat = len(cats)
 
     for i in range(n_cat):
-        weight_file_from = join(out_dir_base, idname, cats[i], "weights.xml.gz")
+        weight_file_from = join(out_dir_base, idname, cats[i], "weights.xml")
         weight_file_to = join(data_dir, "{0}.weights.xml.gz".format(cats[i]))
-        os.system("cp {0} {1}".format(weight_file_from, weight_file_to))
+        os.system("xmllint --format {0} > {0}.tmp".format(weight_file_from))
+        os.system("cd "+ out_dir + " && gzip -f weights.xml.tmp")
+        os.system("mv {0}.tmp.gz {0}.gz".format(weight_file_from))
+        os.system("cp {0}.gz {1}".format(weight_file_from, weight_file_to))
 
     ntp_cff_entries.append(cfg_cmssw['file_name'])
 
