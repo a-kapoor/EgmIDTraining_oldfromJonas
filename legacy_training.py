@@ -40,6 +40,10 @@ for idname in cfg["trainings"]:
         for variable in feature_cols:
             factory.AddVariable(variable, 'F')
 
+        factory.AddSpectator("ele_pt", 'F')
+        factory.AddSpectator("scl_eta", 'F')
+        factory.AddSpectator("genNpu", 'F')
+
         # -----------------------------
         #  Input File & Tree
         # -----------------------------
@@ -126,5 +130,14 @@ for idname in cfg["trainings"]:
         print("==> TMVAClassification is done!")
 
         # move weight files
-        os.system("mv weights/"+mva_name+".weights.xml "+join(out_dir, "weights.xml"))
-        os.system("mv weights/"+mva_name+".class.C "+join(out_dir, "class.C"))
+        os.system("mv weights/"+mva_name+"_BDT.weights.xml "+join(out_dir, "BDT.weights.xml"))
+        os.system("cd "+out_dir+" && gzip "+join(out_dir, "BDT.weights.xml"))
+        os.system("mv weights/"+mva_name+"_BDT.class.C "+join(out_dir, "BDT.class.C"))
+        os.system("rmdir weights"))
+
+        # Convert train tree to pandas data frame saved in hdf
+        root_file = uproot.open(join(out_dir, "TMVA.root"))
+        tree = root_file["TestTree"]
+        # df = tree.pandas.df(["ele_pt", "scl_eta", "genNpu", "classID", "BDT"], entrystop=None)
+        df = tree.pandas.df(["classID", "BDT"], entrystop=None)
+        df.to_hdf(join(out_dir,'pt_eta_score.h5'), key="TestTree")

@@ -232,7 +232,11 @@ class XgbBoTrainer:
         params = format_params(merge_two_dicts(self.params_base,
                                                hyperparameters))
 
-        best_test_auc = self._bo.res["max"]["max_val"]
+        # best_test_auc = self._bo.res["max"]["max_val"]
+
+        # Better to make early stoppping criterion not depend on history
+        best_test_auc = self._bo.res["all"]["values"][0]
+
         if best_test_auc is None: best_test_auc = 0.0
 
         if self._max_training_time is None and not self._train_time_factor is None:
