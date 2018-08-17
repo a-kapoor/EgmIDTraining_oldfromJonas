@@ -43,6 +43,10 @@ for idname in cfg["trainings"]:
         xgboost2tmva.convert_model(xgb_bo_trainer.models["bo"]._Booster.get_dump(),
                                    input_variables = list(zip(feature_cols, len(feature_cols)*['F'])),
                                    output_xml = tmvafile)
+        os.system("xmllint --format {0} > {0}.tmp".format(tmvafile))
+        os.system("mv {0} {0}.bak".format(tmvafile))
+        os.system("mv {0}.tmp {0}".format(tmvafile))
+        os.system("cd "+ out_dir + " && gzip -f weights.xml")
 
         print("Saving bayesian optimization results...")
         xgb_bo_trainer.get_results_df().to_csv(join(out_dir, "xgb_bo_results.csv"))

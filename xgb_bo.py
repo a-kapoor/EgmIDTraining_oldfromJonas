@@ -50,7 +50,7 @@ def merge_two_dicts(x, y):
     z.update(y)    # modifies z with y's keys and values & returns None
     return z
 
-def callback_overtraining(best_test_auc):
+def callback_overtraining(best_test_auc, callback_status):
 
     def callback(env):
         train_auc = env.evaluation_result_list[0][1]
@@ -61,11 +61,12 @@ def callback_overtraining(best_test_auc):
 
         if train_auc - test_auc > 1 - best_test_auc:
             print("We have an overtraining problem! Stop boosting.")
+            callback_status["status"] = 2
             raise xgb.core.EarlyStopException(env.iteration)
 
     return callback
 
-def callback_timeout(max_time, best_test_auc, n_fit=10):
+def callback_timeout(max_time, best_test_auc, callback_status, n_fit=10):
 
     start_time = time.time()
 
@@ -82,6 +83,8 @@ def callback_timeout(max_time, best_test_auc, n_fit=10):
         run_time = time.time() - start_time
 
         if run_time > max_time:
+            callback_status["status"] = 3
+            raise xgb.core.EarlyStopException(env.iteration)
             print("Xgboost training took too long. Stop boosting.")
             raise xgb.core.EarlyStopException(env.iteration)
 
@@ -105,6 +108,8 @@ def callback_timeout(max_time, best_test_auc, n_fit=10):
             status['counter'] = 0
 
         if status['counter'] == n_fit:
+            callback_status["status"] = 2
+            raise xgb.core.EarlyStopException(env.iteration)
             print("Test AUC does not converge well. Stop boosting.")
             raise xgb.core.EarlyStopException(env.iteration)
 
@@ -219,6 +224,9 @@ class XgbBoTrainer:
 
         self.cv_results = []
 
+        #
+        self._callback_status = []
+
     def evaluate_xgb(self, **hyperparameters):
 
         params = format_params(merge_two_dicts(self.params_base,
@@ -230,6 +238,7 @@ class XgbBoTrainer:
         if self._max_training_time is None and not self._train_time_factor is None:
             training_start_time = time.time()
 
+        callback_status = {"status": 0}
         cv_result = xgb.cv(params, self._xgtrain,
                            num_boost_round=self._num_rounds_max,
                            nfold=self._nfold,
@@ -237,8 +246,8 @@ class XgbBoTrainer:
                            callbacks=[
                                callback_print_info(),
                                xgb.callback.early_stop(self._early_stop_rounds, verbose=True),
-                               callback_overtraining(best_test_auc),
-                               callback_timeout(self._max_training_time, best_test_auc),
+                               callback_overtraining(best_test_auc, callback_status),
+                               callback_timeout(self._max_training_time, best_test_auc, callback_status),
                            ])
 
         if self._max_training_time is None and not self._train_time_factor is None:
@@ -247,6 +256,7 @@ class XgbBoTrainer:
         self._early_stops.append(len(cv_result))
 
         self.cv_results.append(cv_result)
+        self.callback_status.append(callback_status['status'])
 
         return cv_result['test-auc-mean'].values[-1]
 
@@ -306,7 +316,7 @@ class XgbBoTrainer:
 
         data = {}
 
-        data["stage"]         = [0] + [1] * self._init_points + [2] * n_iter_eff
+        data["stage"] = [0] + [1] * self._init_points + [2] * n_iter_eff
 
         for name in ["train-auc-mean", "train-auc-std",
                      "test-auc-mean", "test-auc-std"]:
@@ -316,5 +326,6 @@ class XgbBoTrainer:
             data[k] = [res["params"][i][k] for i in range(n)]
 
         data["n_estimators"] = self._early_stops
+        data["callback"] = self._callback_status
 
         return pd.DataFrame(data=data)
