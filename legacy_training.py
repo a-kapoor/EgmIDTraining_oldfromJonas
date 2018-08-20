@@ -1,7 +1,7 @@
 import sys
 import os
 from ROOT import TMVA, TFile, TCut
-from config import cfg
+from config import cfg, variables_iso_only
 from os.path import join
 import uproot
 import root_pandas
@@ -44,6 +44,12 @@ for idname in cfg["trainings"]:
         factory.AddSpectator("scl_eta", 'F')
         factory.AddSpectator("genNpu", 'F')
 
+        # Add isolation variables as spectators
+        spectators = []
+        for v in set(variables_iso_only).difference(set(feature_cols)):
+            spectators.append(v)
+            factory.AddSpectator(v, 'F')
+
         # -----------------------------
         #  Input File & Tree
         # -----------------------------
@@ -52,7 +58,7 @@ for idname in cfg["trainings"]:
         root_file = uproot.open(ntuple_file)
         tree = root_file["ntuplizer/tree"]
 
-        df = tree.pandas.df(feature_cols + ["ele_pt", "scl_eta", "matchedToGenEle", "genNpu"], entrystop=None)
+        df = tree.pandas.df(feature_cols + spectators + ["ele_pt", "scl_eta", "matchedToGenEle", "genNpu"], entrystop=None)
 
         df = df.query(cfg["selection_base"])
         df = df.query(cfg["trainings"][idname][training_bin]["cut"])
@@ -133,11 +139,10 @@ for idname in cfg["trainings"]:
         os.system("mv weights/"+mva_name+"_BDT.weights.xml "+join(out_dir, "BDT.weights.xml"))
         os.system("cd "+out_dir+" && gzip "+join(out_dir, "BDT.weights.xml"))
         os.system("mv weights/"+mva_name+"_BDT.class.C "+join(out_dir, "BDT.class.C"))
-        os.system("rmdir weights"))
+        os.system("rmdir weights")
 
         # Convert train tree to pandas data frame saved in hdf
         root_file = uproot.open(join(out_dir, "TMVA.root"))
         tree = root_file["TestTree"]
-        # df = tree.pandas.df(["ele_pt", "scl_eta", "genNpu", "classID", "BDT"], entrystop=None)
-        df = tree.pandas.df(["classID", "BDT"], entrystop=None)
+        df = tree.pandas.df(["ele_pt", "scl_eta", "genNpu", "classID", "BDT"] + list(variables_iso_only), entrystop=None)
         df.to_hdf(join(out_dir,'pt_eta_score.h5'), key="TestTree")

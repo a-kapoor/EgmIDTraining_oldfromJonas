@@ -202,6 +202,8 @@ class XgbBoTrainer:
                                  random_state=self._random_state,
                                  test_size=test_size)
 
+        print(self.X_train.columns)
+
         # Save data in xgboosts DMatrix format so the encoding doesn't have to
         # be repeated at every step of the Bayesian optimization.
         self._xgtrain = xgb.DMatrix(self.X_train, label=self.y_train)
@@ -232,12 +234,10 @@ class XgbBoTrainer:
         params = format_params(merge_two_dicts(self.params_base,
                                                hyperparameters))
 
-        # best_test_auc = self._bo.res["max"]["max_val"]
-
-        # Better to make early stoppping criterion not depend on history
-        best_test_auc = self._bo.res["all"]["values"][0]
-
-        if best_test_auc is None: best_test_auc = 0.0
+        if len(self._bo.res["all"]["values"]) == 0:
+            best_test_auc = 0.0
+        else:
+            best_test_auc = self._bo.res["all"]["values"][0]
 
         if self._max_training_time is None and not self._train_time_factor is None:
             training_start_time = time.time()
@@ -260,7 +260,7 @@ class XgbBoTrainer:
         self._early_stops.append(len(cv_result))
 
         self.cv_results.append(cv_result)
-        self.callback_status.append(callback_status['status'])
+        self._callback_status.append(callback_status['status'])
 
         return cv_result['test-auc-mean'].values[-1]
 

@@ -28,11 +28,11 @@ for idname in cfg["trainings"]:
         root_file = uproot.open(ntuple_file)
         tree = root_file["ntuplizer/tree"]
 
-        df = tree.pandas.df(feature_cols + ["ele_pt", "scl_eta", "matchedToGenEle", "Fall17NoIsoV2RawVals", "genNpu"], entrystop=None)
+        df = tree.pandas.df(feature_cols + ["ele_pt", "scl_eta", "matchedToGenEle", "genNpu"], entrystop=None)
 
         df = df.query(cfg["selection_base"])
         df = df.query(cfg["trainings"][idname][training_bin]["cut"])
-        df.eval('y = ({0}) + 2 * ({1}) - 1'.format(cfg["selection_bkg"], cfg["selection_sig"]))
+        df.eval('y = ({0}) + 2 * ({1}) - 1'.format(cfg["selection_bkg"], cfg["selection_sig"]), inplace=True)
 
         print("Running bayesian optimized training...")
         xgb_bo_trainer = XgbBoTrainer(data=df, X_cols=feature_cols, y_col="y")
