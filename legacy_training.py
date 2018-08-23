@@ -144,5 +144,5 @@ for idname in cfg["trainings"]:
         # Convert train tree to pandas data frame saved in hdf
         root_file = uproot.open(join(out_dir, "TMVA.root"))
         tree = root_file["TestTree"]
-        df = tree.pandas.df(["ele_pt", "scl_eta", "genNpu", "classID", "BDT"] + list(variables_iso_only), entrystop=None)
+        df = tree.pandas.df(["ele_pt", "scl_eta", "genNpu", "rho", "classID", "BDT"] + list(variables_iso_only), entrystop=None)
         df.to_hdf(join(out_dir,'pt_eta_score.h5'), key="TestTree")

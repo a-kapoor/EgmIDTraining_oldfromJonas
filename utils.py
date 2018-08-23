@@ -23,7 +23,8 @@ class ROCPlot:
                  rlim=None,
                  height_ratios=[2,1],
                  percent=False,
-                 grid=False):
+                 grid=False,
+                 ncol=1):
 
         self.gs = gridspec.GridSpec(2, 1, height_ratios=height_ratios) 
 
@@ -68,6 +69,7 @@ class ROCPlot:
 
         self.auc = []
         
+        self._ncol = ncol
 
     def plot(self, y_true, y_score, **kwargs):
 
@@ -87,6 +89,6 @@ class ROCPlot:
         r = fpr/np.interp(tpr, self.tpr_ref, self.fpr_ref)
         self.axr.plot(tpr[sel] * self._scale, r[sel], **kwargs)
 
-        self.axis.legend(loc="upper left")
+        self.axis.legend(loc="upper left", ncol=self._ncol)
         if self._percent:
             self.axis.get_yaxis().set_major_formatter(FormatStrFormatter("%.0f"))
