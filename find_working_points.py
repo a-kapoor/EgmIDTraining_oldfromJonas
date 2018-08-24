@@ -5,6 +5,30 @@ from os.path import join
 import matplotlib.pyplot as plt
 from scipy.optimize import curve_fit
 import pandas as pd
+import argparse
+import sys
+
+parser = argparse.ArgumentParser(description='Find working points.')
+parser.add_argument('--default' , action='store_true' , help = 'take the default training')
+parser.add_argument('--bayes_opt' , action='store_true' , help = 'take the BO training')
+parser.add_argument('--TMVA' , action='store_true' , help = 'take the TMVA training')
+args = parser.parse_args()
+
+if sum([args.TMVA, args.bayes_opt, args.default]) != 1:
+    print("You should specify one classifier.")
+    sys.exit(0)
+
+df_file = 'pt_eta_score.h5'
+if args.default:
+    score_col = "bdt_score_default"
+    outfile = "working_points_default.json"
+if args.bayes_opt:
+    score_col = "bdt_score_bo"
+    outfile = "working_points_bayes_opt.json"
+if args.TMVA:
+    score_col = "BDT"
+    outfile = "TMVA.json"
+    df_file = join("legacy", df_file)
 
 out_dir_base = join(cfg["out_dir"], cfg['submit_version'])
 
@@ -13,20 +37,22 @@ def wpfunc(x, c, tau, A):
 
 d = {}
 
-def load_df(idname, cat, score_col):
-    df = pd.read_hdf(join(out_dir_base, idname, cat,'pt_eta_score.h5'))
-    # For compatibility with older version of the training framework
+def load_df(idname, cat):
+    df = pd.read_hdf(join(out_dir_base, idname, cat, df_file))
+
+    # For compatibility with older version of the training framework and for legacy training
     if not "y" in df.columns:
-        df.eval('y = ({0}) + 2 * ({1}) - 1'.format(cfg["selection_bkg"], cfg["selection_sig"]), inplace=True)
+        if "classID" in df.columns:
+            # The TMVA classID 0 is signal
+            df.eval('y = 1 - classID', inplace=True)
+        else:
+            df.eval('y = ({0}) + 2 * ({1}) - 1'.format(cfg["selection_bkg"], cfg["selection_sig"]), inplace=True)
 
     df.rename(index=str, columns={score_col: "score"}, inplace=True)
 
     return df
 
 for idname in cfg['working_points']:
-
-    if idname == "Fall17NoIsoV2":
-        continue
 
     d[idname] = {}
     print("Processing {}...".format(idname))
@@ -43,7 +69,7 @@ for idname in cfg['working_points']:
         for i, cat in enumerate(cfgwp['categories']):
             print("        category " + cat)
 
-            df = load_df(idname, cat, "bdt_score_bo")
+            df = load_df(idname, cat)
 
             y = df["y"].values
 
@@ -91,19 +117,19 @@ for idname in cfg['working_points']:
             if wptype == 'constant_cut_sig_eff_targets':
                 for i, cat in enumerate(cfgwp['categories']):
                     if '5' in cat:
-                        df = load_df(idname, cat, "bdt_score_bo")
+                        df = load_df(idname, cat)
                         df.query("y == 1 & ele_pt >= 9.5 & ele_pt < 10.0", inplace=True)
                         wp[cat] = df.score.quantile(1-eff_boundaries[cat.replace('5', '10')])
 
             if wptype == 'pt_scaling_cut_sig_eff_targets':
                 for i, cat in enumerate(cfgwp['categories']):
                     if '5' in cat:
-                        df = load_df(idname, cat, "bdt_score_bo")
+                        df = load_df(idname, cat)
                         df.query("y == 1 & ele_pt >= 9.5 & ele_pt < 10.0", inplace=True)
                         wp_boundary = df.score.quantile(1-eff_boundaries[cat.replace('5', '10')])
                         wp[cat]['c'] = wp[cat]['c'] - wpfunc(9.75, wp[cat]['c'], wp[cat]['tau'], wp[cat]['A']) + wp_boundary
 
         d[idname][wpname] = wp
 
-with open(join(out_dir_base, 'working_points.json'), 'w') as fp:
+with open(join(out_dir_base, outfile), 'w') as fp:
     json.dump(d, fp, indent=4)

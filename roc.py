@@ -11,9 +11,9 @@ for location in ["EB1_10", "EB1_5", "EB2_5", "EB2_10", "EE_10", "EE_5"]:
     # test_v2 = uproot.open('/home/llr/cms/rembser/data/Egamma/20180323_EleMVATraining/test.root')
     # test_v2 = uproot.open('/home/llr/cms/rembser/data/Egamma/20180323_EleMVATraining/train_eval.root')
     test_v2 = uproot.open('/home/llr/cms/rembser/data_home/Egamma/20180813_EleMVATraining/train_eval.root')
-    df_v2 = test_v2["ntuplizer/tree"].pandas.df(["Fall17IsoV2Vals", "ele_pt", "scl_eta", "matchedToGenEle", "genNpu"], entrystop=None)
+    df_v2 = test_v2["ntuplizer/tree"].pandas.df(["Fall17NoIsoV2Vals", "Fall17IsoV2Vals", "ele_pt", "scl_eta", "matchedToGenEle", "genNpu"], entrystop=None)
 
-    df = pd.read_hdf("/home/llr/cms/rembser/EgmIDTraining/out/20180813_EleMVATraining/Fall17IsoV2/{}/pt_eta_score.h5".format(location))
+    df = pd.read_hdf("/home/llr/cms/rembser/EgmIDTraining/out/20180813_EleMVATraining/Fall17NoIsoV2/{}/pt_eta_score.h5".format(location))
 
     df_v2 = df_v2.query(cfg["selection_base"])
     df_v2 = df_v2.query(cfg["trainings"]["Fall17IsoV2"][location]["cut"])
@@ -24,7 +24,7 @@ for location in ["EB1_10", "EB1_5", "EB2_5", "EB2_10", "EE_10", "EE_5"]:
     # df_v2 = df_v2[int(len(df_v2*0.75)):]
 
 
-    df_tmva = pd.read_hdf("/home/llr/cms/rembser/EgmIDTraining/out/20180813_EleMVATraining/Fall17IsoV2/{}/legacy/pt_eta_score.h5".format(location))
+    df_tmva = pd.read_hdf("/home/llr/cms/rembser/EgmIDTraining/out/20180813_EleMVATraining/Fall17NoIsoV2/{}/legacy/pt_eta_score.h5".format(location))
     # df_tmva_noiso = pd.read_hdf("/home/llr/cms/rembser/EgmIDTraining/out/20180813_EleMVATraining/Fall17NoIsoV2/{}/legacy/pt_eta_score.h5".format(location))
 
     # ea = pd.read_csv("effAreaElectrons_cone03_pfNeuHadronsAndPhotons_94X.txt", comment="#", delim_whitespace=True, header=None, names=["eta_min", "eta_max", "ea"])
@@ -50,9 +50,9 @@ for location in ["EB1_10", "EB1_5", "EB2_5", "EB2_10", "EE_10", "EE_5"]:
     roc = ROCPlot(xlim=(0.6,1), ylim=(0.0011, 1), logscale=True, grid=True, percent=True, height_ratios=[1,1], ncol=2, rlim=(0.75, 1.15))
     # roc.plot(df_tmva_noiso["classID"] == 1, df_tmva_noiso["hzz_seq"], label="TMVA + iso seq.", color='k')
     roc.plot(df_tmva["classID"] == 0, df_tmva["BDT"], label="TMVA")
-    roc.plot(df_v2["y"] == 1, df_v2["Fall17IsoV2Vals"], label="Fall17V2")
-    roc.plot(df["matchedToGenEle"] == 1, df["bdt_score_default"], label="xgb default")
-    roc.plot(df["matchedToGenEle"] == 1, df["bdt_score_bo"], label="xgb bayes_opt")
+    roc.plot(df_v2["y"] == 1, df_v2["Fall17NoIsoV2Vals"], label="Fall17V2")
+    roc.plot(df["y"] == 1, df["bdt_score_default"], label="xgb default")
+    roc.plot(df["y"] == 1, df["bdt_score_bo"], label="xgb bayes_opt")
     # plt.show()
-    plt.savefig("plots/bayes_opt/roc_{}.pdf".format(location))
-    plt.savefig("plots/bayes_opt/roc_{}.png".format(location), dpi=300)
+    plt.savefig("plots/bayes_opt/roc_noiso_{}.pdf".format(location))
+    plt.savefig("plots/bayes_opt/roc_noiso_{}.png".format(location), dpi=300)
