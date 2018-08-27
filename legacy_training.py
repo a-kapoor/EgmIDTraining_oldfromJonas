@@ -137,7 +137,7 @@ for idname in cfg["trainings"]:
 
         # move weight files
         os.system("mv weights/"+mva_name+"_BDT.weights.xml "+join(out_dir, "BDT.weights.xml"))
-        os.system("cd "+out_dir+" && gzip "+join(out_dir, "BDT.weights.xml"))
+        os.system("cd "+out_dir+" && gzip -f BDT.weights.xml"))
         os.system("mv weights/"+mva_name+"_BDT.class.C "+join(out_dir, "BDT.class.C"))
         os.system("rmdir weights")
 

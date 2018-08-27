@@ -2,8 +2,21 @@ from config import cfg
 import json
 from os.path import join
 import os
+import argparse
+import sys
 
+parser = argparse.ArgumentParser(description='Find working points.')
+parser.add_argument('--TMVA' , action='store_true' , help = 'take the TMVA training')
+args = parser.parse_args()
+
+wp_file = "working_points_bayes_opt.json"
+weight_file_name = "weights.xml.gz"
 out_dir_base = join(cfg["out_dir"], cfg['submit_version'])
+
+if args.TMVA:
+    weight_file_name = "legacy/BDT.weights.xml.gz"
+    wp_file = "working_points_TMVA.json"
+
 cmssw_dir = join(cfg["cmssw_dir"], cfg['submit_version'])
 
 vid_dir = join(cfg["cmssw_dir"], cfg['submit_version'], "src/RecoEgamma/ElectronIdentification/python/Identification")
@@ -17,7 +30,7 @@ if not os.path.exists(join(cfg["cmssw_dir"], cfg['submit_version'], "src/RecoEga
     os.makedirs(join(cfg["cmssw_dir"], cfg['submit_version'], "src/RecoEgamma/ElectronIdentification/python/Training"))
 
 
-with open(join(out_dir_base, 'working_points.json'), 'r') as f:
+with open(join(out_dir_base, wp_file), 'r') as f:
     wp_dict = json.load(f)
 
 # To add to the ntuplizer
@@ -46,7 +59,7 @@ for idname in cfg["cmssw_cff"]:
     n_cat = len(cats)
 
     for i in range(n_cat):
-        weight_file_from = join(out_dir_base, idname, cats[i], "weights.xml.gz")
+        weight_file_from = join(out_dir_base, idname, cats[i], weight_file_name)
         weight_file_to = join(data_dir, "{0}.weights.xml.gz".format(cats[i]))
         os.system("cp {0} {1}".format(weight_file_from, weight_file_to))
 
@@ -70,7 +83,7 @@ for idname in cfg["cmssw_cff"]:
         cff.write('\n')
         cff.write('mvaWeightFiles = cms.vstring(\n')
         for i in range(n_cat):
-            cff.write('     path.join(weightFileDir, "{0}.weights.xml"), # {0}\n'.format(cats[i]))
+            cff.write('     path.join(weightFileDir, "{0}.weights.xml.gz"), # {0}\n'.format(cats[i]))
         cff.write('     )\n')
         cff.write('\n')
 
@@ -141,7 +154,7 @@ with open(cfg['ntuplizer_cfg'], 'r') as ntp:
                   ntp_new.write('                                          "{}",'.format("".join(x.split("-")[1:]))+'\n')
           if "eleMVAValMaps" in l:
               for x in ntp_eleMVAValMaps_entries:
-                  ntp_new.write('                                           "electronMVAValueMapProducer:{}",'.format(x)+'\n')
+                  ntp_new.write('                                           "electronMVAValueMapProducer:ElectronMVAEstimatorRun2{}",'.format(x)+'\n')
           if "eleMVAValMapLabels" in l:
               for x in ntp_eleMVAValMaps_entries:
-                  ntp_new.write('                                           "{}",'.format(x.replace("ElectronMVAEstimatorRun2", "").replace("Values", "Vals"))+'\n')
+                  ntp_new.write('                                           "{}",'.format(x.replace("Values", "Vals"))+'\n')

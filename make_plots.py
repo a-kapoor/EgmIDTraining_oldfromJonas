@@ -6,9 +6,16 @@ from sklearn import metrics
 import matplotlib.pyplot as plt
 from matplotlib.ticker import FormatStrFormatter
 import matplotlib.gridspec as gridspec
-from root_numpy import root2array, tree2array
-from ROOT import TCut, TFile, TEfficiency
 from os.path import join
+import uproot
+
+cuts = {
+    "EB1": "abs(scl_eta) < 0.800",
+    "EB2": "abs(scl_eta) >= 0.800 & abs(scl_eta) < 1.479",
+    "EE" : "abs(scl_eta) >= 1.479",
+    "5"  : "ele_pt < 10.",
+    "10" : "ele_pt >= 10",
+}
 
 def get_category(location, ptrange):
 
@@ -40,8 +47,10 @@ def eff_with_err(p, t, cl=0.638, percent=False, alpha=1, beta=1):
         eff[i] = p[i]/t[i]
         aa = p[i] + alpha
         bb = t[i] - p[i] + beta
-        lower[i] = TEfficiency.BetaCentralInterval(cl, aa, bb, False)
-        upper[i] = TEfficiency.BetaCentralInterval(cl, aa, bb, True)
+        # lower[i] = TEfficiency.BetaCentralInterval(cl, aa, bb, False)
+        # upper[i] = TEfficiency.BetaCentralInterval(cl, aa, bb, True)
+        lower[i] = 0
+        upper[i] = 0
 
     if percent:
         return 100 * eff, 100 * lower, 100 * upper
@@ -50,41 +59,20 @@ def eff_with_err(p, t, cl=0.638, percent=False, alpha=1, beta=1):
 
 plot_dir = join("plots", cfg['submit_version'])
 
-def read_val_ntuple(rootfile, location=None, ptrange=None, branches=None, selection=None, stop=None, treename="tree"):
+def load_df(rootfile, branches, entrystop=None):
 
-    if ptrange is None and location is None:
-        cut = TCut("")
-    elif ptrange is None:
-        if location == "EB":
-            cut = TCut("EleMVACats != {0} && EleMVACats != {1}  ".format(get_category("EE", "5"), get_category("EE", "10")))
-        else:
-            cut = TCut("EleMVACats == {0} || EleMVACats == {1}".format(get_category(location, "5"), get_category(location, "10")))
-    elif location is None:
-        if ptrange == '5':
-            cut = TCut("EleMVACats < 3")
-        elif ptrange == '10':
-            cut = TCut("EleMVACats >= 3")
-    elif location == "EB":
-        cut = TCut("EleMVACats == {0} || EleMVACats == {1}".format(get_category("EB1", ptrange), get_category("EB2", ptrange)))
-    else:
-        cut = TCut("EleMVACats == {}".format(get_category(location, ptrange)))
+    ntuple_dir = join(cfg['ntuple_dir'], cfg['submit_version'])
+    ntuple_file = join(ntuple_dir, 'test.root')
+    tree = uproot.open(ntuple_file)["ntuplizer/tree"]
 
-    if not selection is None:
-        cut += selection
+    df = tree.pandas.df(set(branches + ["ele_pt", "scl_eta", "matchedToGenEle", "genNpu"]), entrystop=entrystop)
 
+    df = df.query(cfg["selection_base"])
+    df.eval('y = ({0}) + 2 * ({1}) - 1'.format(cfg["selection_bkg"], cfg["selection_sig"]), inplace=True)
 
-    selection = str(cut)
+    df = df.query("y > -1")
 
-    infile = TFile(rootfile, 'READ')
-
-    indir = infile.Get("ntuplizer")
-    intree = indir.Get(treename)
-
-    arr = tree2array(intree, selection=selection, branches=branches, stop=stop)
-
-    infile.Delete()
-
-    return arr
+    return df
 
 ntuple_dir = cfg['ntuple_dir'] + '/' + cfg['submit_version']
 rootfile = ntuple_dir + '/test.root'
@@ -105,9 +93,9 @@ turnon = True
 etaeff = True
 nvtx   = True
 
-#nmax = 200000
-#nmax = 2000000
-nmax = None
+nmax = 200000
+# nmax = 2000000
+# nmax = None
 
 ##################
 # Other parameters
@@ -215,20 +203,21 @@ if ROC:
             print("processing {0} {1}...".format(location, ptrange))
 
             branches = ["Fall17IsoV1Vals", "Fall17NoIsoV1Vals", "Fall17IsoV2Vals", "Fall17NoIsoV2Vals", "Fall17IsoV2RawVals", "Fall17NoIsoV2RawVals", "matchedToGenEle"]
-            data = read_val_ntuple(rootfile, location=location, ptrange=ptrange, branches=branches, selection="matchedToGenEle == 1 || matchedToGenEle == 0 || matchedToGenEle == 3", stop=nmax) # TRUE_PROMPT_ELECTRON || UNMATECHED || TRUE_NON_PROMPT_ELECTRON
+            df = load_df(rootfile, branches, entrystop=nmax)
+            df = df.query(cfg["trainings"]["Fall17NoIsoV2"]["_".join([location, ptrange])]["cut"])
 
             ax1, ax2, axes = create_axes(yunits=3)
 
             xmin = 60
 
-            yref, xref, _ = metrics.roc_curve(data["matchedToGenEle"] == 1, data["Fall17NoIsoV1Vals"])
+            yref, xref, _ = metrics.roc_curve(df["y"] == 1, df["Fall17NoIsoV1Vals"])
             xref = xref * 100
             yref = yref * 100
 
             k = 0
             for yr, cl, lbl in roc_curves:
 
-                y, x, _ = metrics.roc_curve(data["matchedToGenEle"] == 1, data[cl])
+                y, x, _ = metrics.roc_curve(df["y"] == 1, df[cl])
                 x = x * 100
                 y = y * 100
 
@@ -270,8 +259,10 @@ if turnon:
         print("processing {0}...".format(location))
 
         branches = wps + ["ele_pt"]
-        sig = read_val_ntuple(rootfile, location=location, branches=branches, selection="matchedToGenEle == 1", stop=nmax)
-        bkg = read_val_ntuple(rootfile, location=location, branches=branches, selection="matchedToGenEle == 0 || matchedToGenEle == 3", stop=nmax)
+        df = load_df(rootfile, branches, entrystop=nmax)
+        df = df.query(cuts[location])
+        sig = df.query("y == 1")
+        bkg = df.query("y == 0")
 
         tmp = np.concatenate([np.linspace(5, 10, 15), np.exp(np.linspace(np.log(11), np.log(40), 20)), np.array([43.3, 52, 70, 150, 250])])
         pt_bins = np.vstack([tmp[:-1], tmp[1:]]).T
@@ -351,8 +342,10 @@ if etaeff:
         print("processing {0}...".format(ptrange))
 
         branches = wps + ["scl_eta"]
-        sig = read_val_ntuple(rootfile, ptrange=ptrange, branches=branches, selection="matchedToGenEle == 1", stop=nmax)
-        bkg = read_val_ntuple(rootfile, ptrange=ptrange, branches=branches, selection="matchedToGenEle == 0 || matchedToGenEle == 3", stop=nmax)
+        df = load_df(rootfile, branches, entrystop=nmax)
+        df = df.query(cuts[ptrange])
+        sig = df.query("y == 1")
+        bkg = df.query("y == 0")
 
         #tmp = np.linspace(-2.5, 2.5, 201)
         tmp = np.linspace(-2.5, 2.5, 101)
@@ -434,8 +427,10 @@ if nvtx:
             print("processing {0} {1}...".format(location, ptrange))
 
             branches = wps + ["genNpu"]
-            sig = read_val_ntuple(rootfile, location=location, ptrange=ptrange, branches=branches, selection="matchedToGenEle == 1", stop=nmax)
-            bkg = read_val_ntuple(rootfile, location=location, ptrange=ptrange, branches=branches, selection="matchedToGenEle == 0 || matchedToGenEle == 3", stop=nmax)
+            df = load_df(rootfile, branches, entrystop=nmax)
+            df = df.query(cfg["trainings"]["Fall17NoIsoV2"]["_".join([location, ptrange])]["cut"])
+            sig = df.query("y == 1")
+            bkg = df.query("y == 0")
 
             for wplabel in ["wpAll"]:
 

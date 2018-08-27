@@ -1,5 +1,4 @@
 import os
-import numpy as np
 
 if 'CMSSW_BASE' in os.environ:
     cmssw_base = os.environ['CMSSW_BASE']
@@ -121,12 +120,17 @@ cfg["trainings"]["Fall17IsoV2"]["EE_10"]["variables"] = variables_iso_ee
 # Configuring the working points
 ################################
 
-wp90_target = np.loadtxt("wp90.txt", skiprows=1)
-wp80_target = np.loadtxt("wp80.txt", skiprows=1)
+# import numpy as np
+# wp90_target = np.loadtxt("wp90.txt", skiprows=1)
+# wp80_target = np.loadtxt("wp80.txt", skiprows=1)
 
-pt_bins = wp90_target[:,:2]
-wp90_target = wp90_target[:,2]
-wp80_target = wp80_target[:,2]
+# pt_bins     = wp90_target[:,:2]
+# wp90_target = wp90_target[:,2]
+# wp80_target = wp80_target[:,2]
+
+pt_bins     = []
+wp90_target = []
+wp80_target = []
 
 cfg["working_points"] = {}
 cfg["working_points"]["Fall17NoIsoV2"] = {}

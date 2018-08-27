@@ -23,6 +23,8 @@ config.JobType.sendExternalFolder = True
 config.Data.inputDBS = 'global'
 config.Data.publication = False
 
+config.JobType.allowUndistributedCMSSW = True
+
 config.Site.storageSite = cfg["storage_site"]
 if __name__ == '__main__':
 

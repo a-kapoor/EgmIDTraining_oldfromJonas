@@ -82,9 +82,9 @@ Again, don't forget to merge the ROOT files:
 
 You can generate the ROC, pt, eta and pilup curves with this script:
 
-* `python merge_plots.py`
+* `python make_plots.py`
 
 Finally, it is time to make some slides out of it. Just hope you have all the required TeXLive packages installed:
 
-* `python merge_slides.py`
+* `python make_slides.py`
 * `pdflatex slides_<tag of your submit version>.tex`

@@ -27,7 +27,7 @@ if args.bayes_opt:
     outfile = "working_points_bayes_opt.json"
 if args.TMVA:
     score_col = "BDT"
-    outfile = "TMVA.json"
+    outfile = "working_points_TMVA.json"
     df_file = join("legacy", df_file)
 
 out_dir_base = join(cfg["out_dir"], cfg['submit_version'])
