@@ -42,13 +42,11 @@ When the job is done, you should merge the crab output files to one nice root fi
 
 ### Step 2 - Train the ID with xgboost
 
-Xgboost uses a special format to store data, which is called a DMatrix. So the first step is to convert the ntuples do DMatrices, which is done with:
-
-* `python setup_data.py`
-
-Now, you can lauch the training:
+Launch the training with:
 
 * `python training.py`
+
+The code to train with TMVA can be found in `legacy_training.py`.
 
 ### Step 3 - Determine the working points
 
