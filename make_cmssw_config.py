@@ -10,7 +10,7 @@ parser.add_argument('--TMVA' , action='store_true' , help = 'take the TMVA train
 args = parser.parse_args()
 
 wp_file = "working_points_bayes_opt.json"
-weight_file_name = "weights.xml.gz"
+weight_file_name = "model_optimized/weights.xml.gz"
 out_dir_base = join(cfg["out_dir"], cfg['submit_version'])
 
 if args.TMVA:
