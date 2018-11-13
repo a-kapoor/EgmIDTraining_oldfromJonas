@@ -23,7 +23,7 @@ if args.default:
     score_col = "bdt_score_default"
     outfile = "working_points_default.json"
 if args.bayes_opt:
-    score_col = "bdt_score_bo"
+    score_col = "bdt_score_optimized"
     outfile = "working_points_bayes_opt.json"
 if args.TMVA:
     score_col = "BDT"

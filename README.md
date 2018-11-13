@@ -1,6 +1,11 @@
 # EgmIDTraining
 The tools to train BDT Electron and Photon Identifications for CMS.
 
+## Requirements
+
+This toolkit requires the __xgbo package__ to be installed:
+<https://www.github.com/guitargeek/xgbo>
+
 ## How to train an Electron MVA ID
 
 ### Overview

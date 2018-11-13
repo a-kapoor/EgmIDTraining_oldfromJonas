@@ -2,7 +2,7 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 
-df = pd.read_csv("out/20180813_EleMVATraining/Fall17NoIsoV2/EE_5/xgb_bo_results.csv")
+df = pd.read_csv("out/20180813_EleMVATraining/Fall17NoIsoV2/EE_5/summary.csv")
 df["rel_improv"] = (1 - df["test-auc-mean"][0])/(1 - df["test-auc-mean"])
 df["rel_improv_err"] = (df["test-auc-std"]**2 + df["test-auc-std"][0]**2)**0.5
 

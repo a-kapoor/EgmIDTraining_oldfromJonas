@@ -15,8 +15,8 @@ cfg["submit_version"] = "20180813_EleMVATraining"
 cfg["crab_output_dir"] = '/store/user/rembserj/Egamma/%s' % cfg["submit_version"]
 cfg["crab_output_dir_full"] = "/dpm/in2p3.fr/home/cms/trivcat%s" % cfg["crab_output_dir"]
 # Where to store the ntuples and dmatrices
-cfg["ntuple_dir"] = "/home/llr/cms/rembser/data_home/Egamma"
-cfg['dmatrix_dir'] = "/home/llr/cms/rembser/data_home/Egamma"
+cfg["ntuple_dir"] = "/home/llr/cms/rembser/data/Egamma"
+cfg['dmatrix_dir'] = "/home/llr/cms/rembser/data/Egamma"
 cfg['out_dir'] = "out"
 cfg['cmssw_dir'] = "cmssw"
 
